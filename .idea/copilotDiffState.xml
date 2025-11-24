@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/src/main/java/edu/library/Calculator.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/main/java/edu/library/Calculator.java" />
+              <option name="originalContent" value="package edu.library;&#10;&#10;public class Calculator {&#10;    public int add(int a, int b) {&#10;        return a + b;&#10;    }&#10;}&#10;" />
+              <option name="updatedContent" value="package edu.library;&#10;&#10;public class Calculator {&#10;    public int add(int a, int b) {&#10;        return a + b;&#10;    }&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
