@@ -1,27 +1,23 @@
 package edu.library.service;
 
-import edu.library.model.Admin;
+import edu.library.model.Roles;
 
 public class AuthService {
-    // Simple hardcoded admin credentials for demo purposes
     private static final String DEFAULT_USERNAME = "Hala";
     private static final String DEFAULT_PASSWORD = "1234";
 
-    // Track the currently logged-in admin (if any)
-    private Admin currentAdmin;
+    private Roles currentAdmin;
 
-    public Admin login(String username, String password) {
+    public Roles login(String username, String password) {
         if (username == null || password == null) return null;
         if (DEFAULT_USERNAME.equals(username) && DEFAULT_PASSWORD.equals(password)) {
-            currentAdmin = new Admin(username, password);
+            currentAdmin = new Roles(username, password);
             return currentAdmin;
         }
         return null;
     }
 
-    /**
-     * Logout the current admin. Returns true if there was an admin logged in and was logged out.
-     */
+
     public boolean logout() {
         if (currentAdmin == null) return false;
         currentAdmin = null;
@@ -29,9 +25,9 @@ public class AuthService {
     }
 
     /**
-     * Get the currently logged-in admin, or null if none.
+     * Get the currently logged-in role (formerly admin), or null if none.
      */
-    public Admin getCurrentAdmin() {
+    public Roles getCurrentAdmin() {
         return currentAdmin;
     }
 }

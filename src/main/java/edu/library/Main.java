@@ -2,7 +2,7 @@ package edu.library;
 
 import edu.library.model.Book;
 import edu.library.service.BookService;
-import edu.library.model.Admin;
+import edu.library.model.Roles;
 import edu.library.service.AuthService;
 import java.util.List;
 import java.util.Scanner;
@@ -34,7 +34,7 @@ public class Main {
                     String username = input.nextLine();
                     System.out.print("Enter admin password: ");
                     String password = input.nextLine();
-                    Admin admin = auth.login(username, password);
+                    Roles admin = auth.login(username, password);
                     if (admin != null) {
                         System.out.println("✅ Logged in as: " + admin.getUsername());
                     } else {
