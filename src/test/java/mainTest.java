@@ -3,25 +3,22 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class mainTest {
     @BeforeAll
-    static void setUpBeforeClass() {
+    static void setUpBeforeClass() throws Exception {
     }
 
     @AfterAll
-    static void tearDownAfterClass() {
+    static void tearDownAfterClass() throws Exception {
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
     }
-
-
 
 }
