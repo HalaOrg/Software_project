@@ -18,7 +18,7 @@ public class Main {
 
         while (true) {
             System.out.println("\n===== Library Menu =====");
-            System.out.println("1. Login as Admin");
+            System.out.println("1. Login");
             System.out.println("2. Add Book");
             System.out.println("3. Search Book");
             System.out.println("4. Display All Books");
@@ -30,15 +30,15 @@ public class Main {
 
             switch (choice) {
                 case 1:
-                    System.out.print("Enter admin username: ");
+                    System.out.print("Enter username: ");
                     String username = input.nextLine();
-                    System.out.print("Enter admin password: ");
+                    System.out.print("Enter password: ");
                     String password = input.nextLine();
                     Roles admin = auth.login(username, password);
                     if (admin != null) {
-                        System.out.println("✅ Logged in as: " + admin.getUsername());
+                        System.out.println("✅ Logged in as: " + admin.getUsername() + " (" + admin.getRoleName() + ")");
                     } else {
-                        System.out.println("❌ Invalid admin credentials.");
+                        System.out.println("❌ Invalid credentials.");
                     }
                     break;
 
