@@ -35,20 +35,46 @@ public class AuthService {
 
         return null;
     }
+
     public Roles addUser(String username, String password, String roleName) {
-        return register(username, password, "", roleName);
+        return addUser(username, password, roleName, null);
     }
 
-    public Roles register(String username, String password, String email, String roleName) {
+    // new overload that accepts email
+    public Roles addUser(String username, String password, String roleName, String email) {
         if (username == null || password == null || roleName == null) return null;
-        boolean exists = users.stream().anyMatch(u -> u.getUsername().equals(username));
-        if (exists) {
-            return null;
-        }
-        Roles newUser = new Roles(username, password, email, roleName);
+        Roles newUser = new Roles(username, password, roleName, email);
         users.add(newUser);
         saveUsersToFile();
         return newUser;
+    }
+
+    // remove user by username
+    public boolean removeUser(String username) {
+        if (username == null) return false;
+        Roles toRemove = null;
+        for (Roles r : users) {
+            if (r.getUsername().equalsIgnoreCase(username)) {
+                toRemove = r;
+                break;
+            }
+        }
+        if (toRemove != null) {
+            users.remove(toRemove);
+            saveUsersToFile();
+            // if removed user was currently logged in, clear
+            if (currentUser != null && currentUser.getUsername().equalsIgnoreCase(username)) {
+                currentUser = null;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public boolean userExists(String username) {
+        if (username == null) return false;
+        for (Roles r : users) if (r.getUsername().equalsIgnoreCase(username)) return true;
+        return false;
     }
 
     public boolean logout() {
@@ -75,7 +101,10 @@ public class AuthService {
         File file = new File(filePath);
         if (!file.exists()) {
             try {
-                file.createNewFile();
+                boolean created = file.createNewFile();
+                if (!created) {
+                    System.out.println("Warning: could not create users file: " + filePath);
+                }
             } catch (IOException e) {
                 System.out.println("Error creating users file: " + e.getMessage());
             }
@@ -90,16 +119,12 @@ public class AuthService {
                 if (parts.length >= 3) {
                     String username = parts[0].trim();
                     String password = parts[1].trim();
-                    String roleName;
-                    String email;
+                    String roleName = parts[2].trim();
+                    String email = "";
                     if (parts.length >= 4) {
-                        email = parts[2].trim();
-                        roleName = parts[3].trim();
-                    } else {
-                        email = "";
-                        roleName = parts[2].trim();
+                        email = parts[3].trim();
                     }
-                    users.add(new Roles(username, password, email, roleName));
+                    users.add(new Roles(username, password, roleName, email));
                 }
             }
         } catch (IOException e) {
@@ -110,7 +135,8 @@ public class AuthService {
     private void saveUsersToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             for (Roles user : users) {
-                writer.write(String.format("%s,%s,%s,%s%n", user.getUsername(), user.getPassword(), user.getEmail(), user.getRoleName()));
+                // write username,password,role,email (email may be empty)
+                writer.write(String.format("%s,%s,%s,%s%n", user.getUsername(), user.getPassword(), user.getRoleName(), user.getEmail() == null ? "" : user.getEmail()));
             }
         } catch (IOException e) {
             System.out.println("Error saving users: " + e.getMessage());

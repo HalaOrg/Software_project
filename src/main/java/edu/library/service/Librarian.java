@@ -12,6 +12,7 @@ public class Librarian {
      * return 0 = stay logged in, 1 = logout, 2 = exit app
      */
     public static int handle(Scanner input, BookService service, AuthService auth, Roles user) {
+        System.out.println("--- Librarian Session: " + user.getUsername() + " (" + user.getRoleName() + ") ---");
         System.out.println("1. Add Book");
         System.out.println("2. Display All Books");
         System.out.println("3. Search Book");

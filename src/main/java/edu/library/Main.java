@@ -7,7 +7,6 @@ import edu.library.service.AuthService;
 import edu.library.service.Admin;
 import edu.library.service.Member;
 import edu.library.service.Librarian;
-import java.util.List;
 import java.util.Scanner;
 
 
@@ -34,18 +33,24 @@ public class Main {
             }
 
             if (choice == 1) {
-                System.out.print("Enter email: ");
-                String email = input.nextLine().trim();
+                String email;
+                while (true) {
+                    System.out.print("Enter email (required): ");
+                    email = input.nextLine().trim();
+                    if (email.isEmpty()) {
+                        System.out.println("Email is required and cannot be empty.");
+                        continue;
+                    }
+                    break;
+                }
+
                 System.out.print("Enter username: ");
                 String username = input.nextLine().trim();
                 System.out.print("Enter password: ");
                 String password = input.nextLine().trim();
-                System.out.print("Enter role (ADMIN/MEMBER/LIBRARIAN): ");
-                String role = input.nextLine().trim().toUpperCase();
-                if (!role.equals("ADMIN") && !role.equals("MEMBER") && !role.equals("LIBRARIAN")) {
-                    System.out.println("Invalid role. Defaulting to MEMBER.");
-                    role = "MEMBER";
-                }
+                // Registration always creates a MEMBER by default
+                String role = "MEMBER";
+
                 // check if username exists
                 boolean exists = false;
                 for (Roles r : auth.getUsers()) {
@@ -58,7 +63,7 @@ public class Main {
                     System.out.println("Username already exists. Choose another.");
                 } else {
                     auth.addUser(username, password, role, email);
-                    System.out.println("Registration successful. You can now login.");
+                    System.out.println("Registration successful. You can now login (role: MEMBER).");
                 }
                 continue;
             }
@@ -79,13 +84,16 @@ public class Main {
                 // role-based menu loop
                 boolean sessionActive = true;
                 while (sessionActive) {
-                    int result = 0;
+                    int result;
                     if (user.isAdmin()) {
                         result = Admin.handle(input, service, auth, user);
-                    } else if ("MEMBER".equalsIgnoreCase(user.getRoleName())) {
+                    } else if (user.isMember()) {
                         result = Member.handle(input, service, auth, user);
-                    } else {
+                    } else if (user.isLibrarian()) {
                         result = Librarian.handle(input, service, auth, user);
+                    } else {
+                        // unknown role: fallback to member behavior
+                        result = Member.handle(input, service, auth, user);
                     }
 
                     if (result == 1) { // logout
