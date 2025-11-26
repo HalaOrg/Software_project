@@ -93,5 +93,20 @@ class RolesTest {
         Roles r4 = new Roles("OtherUser", "1234", "ADMIN", "a@a.com");
         assertNotEquals(r1, r4);
     }
+    @Test
+    void equalsShouldReturnTrueWhenSameInstance() {
+        Roles r = new Roles("A", "1");
+        assertTrue(r.equals(r));
+    }
+    @Test
+    void equalsShouldReturnFalseWhenOtherIsNull() {
+        Roles r = new Roles("A", "1");
+        assertFalse(r.equals(null));  // o == null → TRUE branch
+    }
+    @Test
+    void equalsShouldReturnFalseWhenOtherIsDifferentClass() {
+        Roles r = new Roles("A", "1");
+        assertFalse(r.equals("some string"));  // getClass() != other.getClass()
+    }
 
 }

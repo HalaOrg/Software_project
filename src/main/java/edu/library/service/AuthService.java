@@ -42,8 +42,11 @@ public class AuthService {
 
     // new overload that accepts email
     public Roles addUser(String username, String password, String roleName, String email) {
+        // require username/password/role and a non-blank email
         if (username == null || password == null || roleName == null) return null;
-        Roles newUser = new Roles(username, password, roleName, email);
+        if (email == null) return null;
+        if (email.trim().isEmpty()) return null;
+        Roles newUser = new Roles(username, password, roleName, email.trim());
         users.add(newUser);
         saveUsersToFile();
         return newUser;
