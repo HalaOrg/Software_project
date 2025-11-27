@@ -1,0 +1,23 @@
+ToReturn,A,R100,true,null
+Y,A,B100,true,null
+X,A,B999,true,null
+SearchTitle,Auth,S-ISBN,true,null
+D1,A1,ISBN-D1,true,null
+The Title,Author Name,ISBN123,true,null
+The Hobbit,Tolkien,12345,true,null
+LOTR,Tolkien,54321,true,null
+Clean Code,Robert Martin,999,true,null
+The Hobbit,Tolkien,12345,true,null
+LOTR,Tolkien,54321,true,null
+The Hobbit,Tolkien,12345,false,2025-12-25
+LOTR,Tolkien,54321,true,null
+The Hobbit,Tolkien,12345,true,null
+LOTR,Tolkien,54321,false,2025-11-24
+The Hobbit,Tolkien,12345,false,2025-12-25
+LOTR,Tolkien,54321,true,null
+The Hobbit,Tolkien,12345,true,null
+LOTR,Tolkien,54321,true,null
+The Hobbit,Tolkien,12345,true,null
+LOTR,Tolkien,54321,true,null
+The Hobbit,Tolkien,12345,true,null
+LOTR,Tolkien,54321,false,2025-11-24
