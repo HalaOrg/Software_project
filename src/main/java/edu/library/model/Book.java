@@ -101,7 +101,7 @@ public class Book {
 
     @Override
     public String toString() {
-        return String.format("Title: %s | Author: %s | ISBN: %s | Available Copies: %d/%d | DueDate: %s",
-                title, author, isbn, availableCopies, totalCopies, dueDate != null ? dueDate : "N/A");
+        return String.format("Title: %s | Author: %s | ISBN: %s | Available Copies: %d/%d",
+                title, author, isbn, availableCopies, totalCopies);
     }
 }
