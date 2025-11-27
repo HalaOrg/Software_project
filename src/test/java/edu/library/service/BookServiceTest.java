@@ -86,6 +86,14 @@ public class BookServiceTest {
     }
 
     @Test
+    void testBorrowBookFailWhenNoCopiesForDifferentUser() {
+        service.borrowBook(book1, "member1");
+        boolean result = service.borrowBook(book1, "member2");
+        assertFalse(result);
+        assertEquals(0, book1.getAvailableCopies());
+    }
+
+    @Test
     void testReturnBookSuccess() {
         service.borrowBook(book1, "member");
         boolean result = service.returnBook(book1, "member");
