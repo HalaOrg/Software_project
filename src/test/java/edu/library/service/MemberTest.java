@@ -5,7 +5,9 @@ import edu.library.model.Roles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -162,6 +164,36 @@ public class MemberTest {
     }
 
     @Test
+    void viewBorrowedBooks_showsRemainingTime() {
+        Path originalCwd = Path.of(System.getProperty("user.dir"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        try {
+            System.setProperty("user.dir", tempDir.toString());
+            BookService service = new BookService(tempDir.resolve("books_borrowed_view.txt").toString(),
+                    new BorrowRecordService(tempDir.resolve("borrow_records_view.txt").toString()),
+                    new FineService(tempDir.resolve("fines_view.txt").toString()));
+            Book book = new Book("Timer","Auth","T-1");
+            service.addBook(book);
+            service.borrowBook(book, "m");
+
+            AuthService auth = new AuthService(tempDir.resolve("u_view.txt").toString());
+            Roles member = new Roles("m","p","MEMBER","m@example.com");
+
+            System.setOut(new PrintStream(out));
+            int rc = runHandle("6\n", service, auth, member);
+            assertEquals(0, rc);
+        } finally {
+            System.setProperty("user.dir", originalCwd.toString());
+            System.setOut(originalOut);
+        }
+
+        String output = out.toString();
+        assertTrue(output.contains("ISBN T-1"));
+        assertTrue(output.contains("due in"));
+    }
+
+    @Test
     void logout_returns1_andClearsCurrentUser() throws IOException {
         Path usersFile = tempDir.resolve("u_logout_member.txt");
         Files.write(usersFile, Collections.singletonList("mem,mpwd,MEMBER,mem@example.com"));
@@ -172,7 +204,7 @@ public class MemberTest {
         BookService service = new BookService(tempDir.resolve("books_logout.txt").toString(),
                 new BorrowRecordService(tempDir.resolve("borrow_records_logout.txt").toString()),
                 new FineService(tempDir.resolve("fines_logout.txt").toString()));
-        int rc = runHandle("6\n", service, auth, mem);
+        int rc = runHandle("7\n", service, auth, mem);
         assertEquals(1, rc);
         assertNull(auth.getCurrentUser());
     }
@@ -184,7 +216,7 @@ public class MemberTest {
                 new BorrowRecordService(tempDir.resolve("borrow_records_exit.txt").toString()),
                 new FineService(tempDir.resolve("fines_exit.txt").toString()));
 
-        int rc = runHandle("7\n", service, auth, mem);
+        int rc = runHandle("8\n", service, auth, mem);
         assertEquals(2, rc);
     }
     @Test

@@ -1,8 +1,11 @@
 package edu.library.service;
 
 import edu.library.model.Book;
+import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Scanner;
 
@@ -18,8 +21,9 @@ public class Member {
         System.out.println("3. Return Book (by ISBN)");
         System.out.println("4. Display All Books");
         System.out.println("5. Pay Fines");
-        System.out.println("6. Logout");
-        System.out.println("7. Exit");
+        System.out.println("6. View My Borrowed Books & Remaining Time");
+        System.out.println("7. Logout");
+        System.out.println("8. Exit");
         System.out.print("Choose option: ");
 
         String opt = input.nextLine();
@@ -52,11 +56,6 @@ public class Member {
                     System.out.println("Book not found.");
                     return 0;
                 }
-                if (!bookToBorrow.isAvailable()) {
-                    System.out.println("Book is currently not available :(");
-                    return 0;
-                }
-
                 if (service.borrowBook(bookToBorrow, user.getUsername())) {
                     System.out.println("✅ Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
                 }
@@ -120,6 +119,26 @@ public class Member {
                 return 0;
             }
             case 6: {
+                List<BorrowRecord> myRecords = service.getBorrowRecordsForUser(user.getUsername());
+                boolean anyActive = false;
+                for (BorrowRecord record : myRecords) {
+                    if (!record.isReturned() && record.getDueDate() != null) {
+                        anyActive = true;
+                        long remaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
+                        if (remaining >= 0) {
+                            System.out.println("ISBN " + record.getIsbn() + " → due in " + remaining + " day(s).");
+                        } else {
+                            System.out.println("ISBN " + record.getIsbn() + " → overdue by " + Math.abs(remaining) + " day(s)."
+                            );
+                        }
+                    }
+                }
+                if (!anyActive) {
+                    System.out.println("No active borrowed books.");
+                }
+                return 0;
+            }
+            case 7: {
                 if (auth.logout()) {
                     System.out.println("✅ Logged out successfully.");
                     return 1;
@@ -128,7 +147,7 @@ public class Member {
                     return 0;
                 }
             }
-            case 7: {
+            case 8: {
                 System.out.println("👋 Exiting...");
                 return 2;
             }

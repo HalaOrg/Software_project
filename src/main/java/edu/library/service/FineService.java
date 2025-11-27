@@ -42,6 +42,16 @@ public class FineService {
         return updated;
     }
 
+    /**
+     * Exposes all fine balances so that privileged roles (e.g. librarians) can
+     * review outstanding amounts.
+     *
+     * @return a copy of the balances map keyed by username
+     */
+    public Map<String, Integer> getAllBalances() {
+        return new HashMap<>(balances);
+    }
+
     private void load() {
         balances.clear();
         File file = new File(filePath);

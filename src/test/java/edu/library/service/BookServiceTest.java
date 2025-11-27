@@ -74,6 +74,7 @@ public class BookServiceTest {
         assertTrue(result);
         assertFalse(book1.isAvailable());
         assertEquals(LocalDate.now().plusDays(28), book1.getDueDate());
+        assertEquals(0, book1.getQuantity());
     }
 
     @Test
@@ -90,6 +91,7 @@ public class BookServiceTest {
         assertTrue(result);
         assertTrue(book1.isAvailable());
         assertNull(book1.getDueDate());
+        assertEquals(1, book1.getQuantity());
     }
 
     @Test
@@ -112,5 +114,31 @@ public class BookServiceTest {
         book2.setDueDate(LocalDate.now().minusDays(3));
         int fine = service.calculateFine(book2);
         assertEquals(3 * 10, fine);
+    }
+
+    @Test
+    void updateQuantity_setsAvailabilityAndQuantity() {
+        boolean updated = service.updateQuantity(book1.getIsbn(), 4);
+        assertTrue(updated);
+        assertEquals(4, book1.getQuantity());
+        assertTrue(book1.isAvailable());
+
+        updated = service.updateQuantity(book1.getIsbn(), 0);
+        assertTrue(updated);
+        assertEquals(0, book1.getQuantity());
+        assertFalse(book1.isAvailable());
+    }
+
+    @Test
+    void deleteBook_blocksWhenBorrowed() {
+        service.borrowBook(book1, "member");
+        assertFalse(service.deleteBook(book1.getIsbn()));
+        assertFalse(service.getBooks().isEmpty());
+    }
+
+    @Test
+    void deleteBook_removesWhenAvailable() {
+        assertTrue(service.deleteBook(book2.getIsbn()));
+        assertEquals(1, service.getBooks().size());
     }
 }
