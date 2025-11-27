@@ -2,6 +2,8 @@ package edu.library.service;
 
 import edu.library.model.Book;
 import org.junit.jupiter.api.*;
+import edu.library.service.BorrowRecordService;
+import edu.library.service.FineService;
 import org.junit.jupiter.api.io.TempDir;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,16 +22,12 @@ public class BookServiceTest {
 
     @BeforeEach
     void setup() {
-        // switch working dir to temp so BookService writes to tempDir/books.txt
         originalCwd = Path.of(System.getProperty("user.dir"));
         System.setProperty("user.dir", tempDir.toString());
 
-        service = new BookService();
-        // ensure a clean books file
-        try {
-            java.nio.file.Files.deleteIfExists(tempDir.resolve("books.txt"));
-        } catch (Exception ignored) {
-        }
+        service = new BookService(tempDir.resolve("books.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records.txt").toString()),
+                new FineService(tempDir.resolve("fines.txt").toString()));
         service.loadBooksFromFile();
 
         book1 = new Book("The Hobbit", "Tolkien", "12345");
@@ -72,7 +70,7 @@ public class BookServiceTest {
 
     @Test
     void testBorrowBookSuccess() {
-        boolean result = service.borrowBook(book1);
+        boolean result = service.borrowBook(book1, "member");
         assertTrue(result);
         assertFalse(book1.isAvailable());
         assertEquals(LocalDate.now().plusDays(28), book1.getDueDate());
@@ -80,15 +78,15 @@ public class BookServiceTest {
 
     @Test
     void testBorrowBookFailAlreadyBorrowed() {
-        service.borrowBook(book1);
-        boolean result = service.borrowBook(book1);
+        service.borrowBook(book1, "member");
+        boolean result = service.borrowBook(book1, "member");
         assertFalse(result);
     }
 
     @Test
     void testReturnBookSuccess() {
-        service.borrowBook(book1);
-        boolean result = service.returnBook(book1);
+        service.borrowBook(book1, "member");
+        boolean result = service.returnBook(book1, "member");
         assertTrue(result);
         assertTrue(book1.isAvailable());
         assertNull(book1.getDueDate());
@@ -96,7 +94,7 @@ public class BookServiceTest {
 
     @Test
     void testReturnBookFailNotBorrowed() {
-        boolean result = service.returnBook(book2);
+        boolean result = service.returnBook(book2, "member");
         assertFalse(result);
     }
 

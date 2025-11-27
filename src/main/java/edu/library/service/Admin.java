@@ -11,6 +11,7 @@ public class Admin {
      * return 0 = stay logged in, 1 = logout, 2 = exit app
      */
     public static int handle(Scanner input, BookService service, AuthService auth, Roles user) {
+        System.out.println("\n--- Admin Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
         System.out.println("1. Add Book");
         System.out.println("2. Search Book");
         System.out.println("3. Display All Books");

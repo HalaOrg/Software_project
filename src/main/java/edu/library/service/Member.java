@@ -12,13 +12,14 @@ public class Member {
      * return 0 = stay logged in, 1 = logout, 2 = exit app
      */
     public static int handle(Scanner input, BookService service, AuthService auth, Roles user) {
-        System.out.println("--- Member Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
+        System.out.println("\n--- Member Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
         System.out.println("1. Search Book");
         System.out.println("2. Borrow Book (28-day loan by ISBN)");
         System.out.println("3. Return Book (by ISBN)");
         System.out.println("4. Display All Books");
-        System.out.println("5. Logout");
-        System.out.println("6. Exit");
+        System.out.println("5. Pay Fines");
+        System.out.println("6. Logout");
+        System.out.println("7. Exit");
         System.out.print("Choose option: ");
 
         String opt = input.nextLine();
@@ -56,8 +57,8 @@ public class Member {
                     return 0;
                 }
 
-                if (service.borrowBook(bookToBorrow)) {
-                    System.out.println("Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
+                if (service.borrowBook(bookToBorrow, user.getUsername())) {
+                    System.out.println("✅ Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
                 }
                 else {
                     System.out.println("Could not borrow book.");
@@ -76,8 +77,12 @@ public class Member {
                     System.out.println("This book is not borrowed.");
                     return 0;
                 }
-                if (service.returnBook(bookToReturn)) {
+                if (service.returnBook(bookToReturn, user.getUsername())) {
                     System.out.println("Book returned successfully.");
+                    int outstanding = service.getOutstandingFine(user.getUsername());
+                    if (outstanding > 0) {
+                        System.out.println("You have outstanding fines: " + outstanding + " NIS.");
+                    }
                 } else {
                     System.out.println("Could not return book.");
                 }
@@ -88,6 +93,33 @@ public class Member {
                 return 0;
             }
             case 5: {
+                int outstanding = service.getOutstandingFine(user.getUsername());
+                if (outstanding == 0) {
+                    System.out.println("You have no outstanding fines.");
+                    return 0;
+                }
+                System.out.println("Your outstanding fines: " + outstanding + " NIS.");
+                System.out.print("Enter amount to pay: ");
+                String amtStr = input.nextLine();
+                int amt;
+                try {
+                    amt = Integer.parseInt(amtStr.trim());
+                } catch (Exception e) {
+                    System.out.println("Invalid amount.");
+                    return 0;
+                }
+                if (amt <= 0) {
+                    System.out.println("Amount must be positive.");
+                    return 0;
+                }
+                if (amt > outstanding) {
+                    amt = outstanding; // pay only what is owed
+                }
+                service.payFine(user.getUsername(), amt);
+                System.out.println("Paid " + amt + " NIS. Remaining fines: " + service.getOutstandingFine(user.getUsername()) + " NIS.");
+                return 0;
+            }
+            case 6: {
                 if (auth.logout()) {
                     System.out.println("✅ Logged out successfully.");
                     return 1;
@@ -96,7 +128,7 @@ public class Member {
                     return 0;
                 }
             }
-            case 6: {
+            case 7: {
                 System.out.println("👋 Exiting...");
                 return 2;
             }

@@ -35,7 +35,7 @@ public class AdminTest {
 
         // choose option 6 and attempt to remove self
         String input = "6\n" + admin.getUsername() + "\n";
-        int result = runHandle(input, new BookService(), auth, admin);
+        int result = runHandle(input, new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString())), auth, admin);
         assertEquals(0, result);
         // user should still exist
         assertTrue(auth.userExists("admin"));
@@ -50,7 +50,7 @@ public class AdminTest {
         assertNotNull(joe);
 
         String input = "8\n"; // logout option
-        int result = runHandle(input, new BookService(), auth, joe);
+        int result = runHandle(input, new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString())), auth, joe);
         assertEquals(1, result);
         assertNull(auth.getCurrentUser());
     }
@@ -60,7 +60,7 @@ public class AdminTest {
         AuthService auth = new AuthService(tempDir.resolve("u.txt").toString());
         Roles dummy = new Roles("x","p","ADMIN","x@example.com");
         String input = "9\n";
-        int result = runHandle(input, new BookService(), auth, dummy);
+        int result = runHandle(input, new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString())), auth, dummy);
         assertEquals(2, result);
     }
 
@@ -77,7 +77,7 @@ public class AdminTest {
 
         // choose option 7 (List Users)
         String input = "7\n";
-        int result = runHandle(input, new BookService(), auth, admin);
+        int result = runHandle(input, new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString())), auth, admin);
         assertEquals(0, result);
         // ensure both users reported via auth.getUsers()
         List<Roles> users = auth.getUsers();
@@ -90,7 +90,7 @@ public class AdminTest {
         Path originalCwd = Path.of(System.getProperty("user.dir"));
         try {
             System.setProperty("user.dir", tempDir.toString());
-            BookService service = new BookService();
+            BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
 
             AuthService auth = new AuthService(tempDir.resolve("u4.txt").toString());
             Roles admin = new Roles("adm","pwd","ADMIN","adm@example.com");
@@ -116,7 +116,7 @@ public class AdminTest {
     void optionAddMember_success_withEmailLoop() {
         Path usersFile = tempDir.resolve("users_add_member.txt");
         AuthService auth = new AuthService(usersFile.toString());
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
 
         // first provide empty email to trigger the loop, then valid email, username and password
@@ -136,7 +136,7 @@ public class AdminTest {
         // pre-add a user
         auth.addUser("sam", "sampwd", "MEMBER", "sam@example.com");
 
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
 
         String input = "4\nmember@example.com\nsam\notherpwd\n";
@@ -154,7 +154,7 @@ public class AdminTest {
     void optionAddLibrarian_success_withEmailLoop() {
         Path usersFile = tempDir.resolve("users_add_lib.txt");
         AuthService auth = new AuthService(usersFile.toString());
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
 
         String input = "5\n\nnewlib@example.com\nnewlib\nlibpass\n";
@@ -171,7 +171,7 @@ public class AdminTest {
         AuthService auth = new AuthService(usersFile.toString());
         auth.addUser("libx", "pw1", "LIBRARIAN", "libx@example.com");
 
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
 
         String input = "5\nlib2@example.com\nlibx\nnewpw\n";
@@ -184,7 +184,7 @@ public class AdminTest {
 
     @Test
     void optionSearchBook_found() {
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         service.addBook(new Book("SearchTitle","Auth","S-ISBN"));
         AuthService auth = new AuthService(tempDir.resolve("u_search_admin.txt").toString());
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
@@ -198,7 +198,7 @@ public class AdminTest {
 
     @Test
     void optionSearchBook_notFound() {
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_search_admin2.txt").toString());
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
 
@@ -211,7 +211,7 @@ public class AdminTest {
 
     @Test
     void optionDisplayBooks_empty_and_withBooks() {
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_display.txt").toString());
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
 
@@ -229,7 +229,7 @@ public class AdminTest {
     void invalidOption_returns0_admin() {
         AuthService auth = new AuthService(tempDir.resolve("u_inv_admin.txt").toString());
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
 
         int rc = runHandle("notanumber\n", service, auth, admin);
         assertEquals(0, rc);
@@ -240,7 +240,7 @@ public class AdminTest {
         Path usersFile = tempDir.resolve("users_remove.txt");
         AuthService auth = new AuthService(usersFile.toString());
         auth.addUser("victim", "vpwd", "MEMBER", "v@example.com");
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_admin.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_admin.txt").toString()), new FineService(tempDir.resolve("fines_admin.txt").toString()));
         Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
 
         assertTrue(auth.userExists("victim"));

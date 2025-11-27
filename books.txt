@@ -1,6 +1,3 @@
-ToReturn,A,R100,true,null
-Y,A,B100,true,null
-X,A,B999,true,null
-SearchTitle,Auth,S-ISBN,true,null
-D1,A1,ISBN-D1,true,null
-The Title,Author Name,ISBN123,true,null
+
+My Book,Some Author,ISBN-1,true,null
+
