@@ -9,6 +9,7 @@ import java.util.List;
 
 public class BookService {
     private static final String FILE_PATH = "books.txt";
+    private static final int STANDARD_LOAN_DAYS = 28;
     private List<Book> books = new ArrayList<>();
 
     public void loadBooksFromFile() {
@@ -93,10 +94,10 @@ public class BookService {
         }
     }
 
-    public boolean borrowBook(Book book, int days) {
+    public boolean borrowBook(Book book) {
         if (!book.isAvailable()) return false;
         book.setAvailable(false);
-        book.setDueDate(LocalDate.now().plusDays(days));
+        book.setDueDate(LocalDate.now().plusDays(STANDARD_LOAN_DAYS));
         saveAllBooksToFile();
         return true;
     }
@@ -114,6 +115,15 @@ public class BookService {
         return (int) java.time.temporal.ChronoUnit.DAYS.between(book.getDueDate(), LocalDate.now()) * 10;
     }
 
+    public List<Book> getOverdueBooks() {
+        List<Book> overdue = new ArrayList<>();
+        for (Book book : books) {
+            if (book.isOverdue()) {
+                overdue.add(book);
+            }
+        }
+        return overdue;
+    }
     public List<Book> getBooks() {
         return books;
     }

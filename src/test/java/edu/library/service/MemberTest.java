@@ -69,12 +69,11 @@ public class MemberTest {
             AuthService auth = new AuthService(tempDir.resolve("u_borrow.txt").toString());
             Roles member = new Roles("m","p","MEMBER","m@example.com");
 
-            int rc = runHandle("2\nB123\n7\n", service, auth, member);
+            int rc = runHandle("2\nB123\n", service, auth, member);
             assertEquals(0, rc);
-            // book should be unavailable and have a dueDate approx now + 7 days
             assertFalse(book.isAvailable());
             assertNotNull(book.getDueDate());
-            assertTrue(book.getDueDate().isAfter(LocalDate.now()));
+            assertEquals(LocalDate.now().plusDays(28), book.getDueDate());
         } finally {
             System.setProperty("user.dir", originalCwd.toString());
         }
@@ -89,21 +88,7 @@ public class MemberTest {
         AuthService auth = new AuthService(tempDir.resolve("u_borrow_no.txt").toString());
         Roles member = new Roles("m","p","MEMBER","m@example.com");
 
-        int rc = runHandle("2\nNOISBN\n7\n", service, auth, member);
-        assertEquals(0, rc);
-        assertTrue(book.isAvailable());
-    }
-
-    @Test
-    void borrow_invalidDays_noChange() {
-        BookService service = new BookService();
-        Book book = new Book("Y","A","B100");
-        service.addBook(book);
-
-        AuthService auth = new AuthService(tempDir.resolve("u_borrow_invalid_days.txt").toString());
-        Roles member = new Roles("m","p","MEMBER","m@example.com");
-
-        int rc = runHandle("2\nB100\nnotanumber\n", service, auth, member);
+        int rc = runHandle("2\nNONEXISTENT\n", service, auth, member);
         assertEquals(0, rc);
         assertTrue(book.isAvailable());
     }
@@ -113,13 +98,12 @@ public class MemberTest {
         BookService service = new BookService();
         Book book = new Book("Z","A","B200");
         service.addBook(book);
-        // make unavailable
-        service.borrowBook(book, 3);
+        service.borrowBook(book);
 
         AuthService auth = new AuthService(tempDir.resolve("u_borrow_na.txt").toString());
         Roles member = new Roles("m","p","MEMBER","m@example.com");
 
-        int rc = runHandle("2\nB200\n5\n", service, auth, member);
+        int rc = runHandle("2\nB200\n", service, auth, member);
         assertEquals(0, rc);
         assertFalse(book.isAvailable());
     }
@@ -132,7 +116,7 @@ public class MemberTest {
             BookService service = new BookService();
             Book book = new Book("ToReturn","A","R100");
             service.addBook(book);
-            service.borrowBook(book, 2);
+            service.borrowBook(book);
             assertFalse(book.isAvailable());
 
             AuthService auth = new AuthService(tempDir.resolve("u_return.txt").toString());

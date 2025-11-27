@@ -14,7 +14,7 @@ public class Member {
     public static int handle(Scanner input, BookService service, AuthService auth, Roles user) {
         System.out.println("--- Member Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
         System.out.println("1. Search Book");
-        System.out.println("2. Borrow Book (by ISBN)");
+        System.out.println("2. Borrow Book (28-day loan by ISBN)");
         System.out.println("3. Return Book (by ISBN)");
         System.out.println("4. Display All Books");
         System.out.println("5. Logout");
@@ -52,21 +52,14 @@ public class Member {
                     return 0;
                 }
                 if (!bookToBorrow.isAvailable()) {
-                    System.out.println("Book is currently not available.");
+                    System.out.println("Book is currently not available :(");
                     return 0;
                 }
-                System.out.print("For how many days? ");
-                String daysStr = input.nextLine();
-                int days;
-                try {
-                    days = Integer.parseInt(daysStr.trim());
-                } catch (Exception e) {
-                    System.out.println("Invalid number");
-                    return 0;
+
+                if (service.borrowBook(bookToBorrow)) {
+                    System.out.println("Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
                 }
-                if (service.borrowBook(bookToBorrow, days)) {
-                    System.out.println("Book borrowed successfully.");
-                } else {
+                else {
                     System.out.println("Could not borrow book.");
                 }
                 return 0;

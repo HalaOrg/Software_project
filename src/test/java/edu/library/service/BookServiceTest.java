@@ -72,7 +72,7 @@ public class BookServiceTest {
 
     @Test
     void testBorrowBookSuccess() {
-        boolean result = service.borrowBook(book1, 28);
+        boolean result = service.borrowBook(book1);
         assertTrue(result);
         assertFalse(book1.isAvailable());
         assertEquals(LocalDate.now().plusDays(28), book1.getDueDate());
@@ -80,14 +80,14 @@ public class BookServiceTest {
 
     @Test
     void testBorrowBookFailAlreadyBorrowed() {
-        service.borrowBook(book1, 28);
-        boolean result = service.borrowBook(book1, 28);
+        service.borrowBook(book1);
+        boolean result = service.borrowBook(book1);
         assertFalse(result);
     }
 
     @Test
     void testReturnBookSuccess() {
-        service.borrowBook(book1, 7);
+        service.borrowBook(book1);
         boolean result = service.returnBook(book1);
         assertTrue(result);
         assertTrue(book1.isAvailable());
@@ -102,13 +102,16 @@ public class BookServiceTest {
 
     @Test
     void testOverdueDetection() {
-        service.borrowBook(book2, -3);
+        book2.setAvailable(false);
+        book2.setDueDate(LocalDate.now().minusDays(3));
         assertTrue(book2.isOverdue());
+        assertTrue(service.getOverdueBooks().contains(book2));
     }
 
     @Test
     void testCalculateFine() {
-        service.borrowBook(book2, -3);
+        book2.setAvailable(false);
+        book2.setDueDate(LocalDate.now().minusDays(3));
         int fine = service.calculateFine(book2);
         assertEquals(3 * 10, fine);
     }
