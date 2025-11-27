@@ -6,7 +6,7 @@ public class Book {
     private String author;
     private String isbn;
     private boolean available;
-    private LocalDate dueDate; // جديد
+    private LocalDate dueDate;
 
     public Book(String title, String author, String isbn) {
         this.title = title;

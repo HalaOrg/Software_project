@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Scanner;
 
 import static org.junit.jupiter.api.Assertions.*;
+import edu.library.service.BorrowRecordService;
+import edu.library.service.FineService;
 
 public class MemberTest {
 
@@ -27,22 +29,24 @@ public class MemberTest {
 
     @Test
     void search_noResults_returns0() {
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_search_none.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records_none.txt").toString()),
+                new FineService(tempDir.resolve("fines_none.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_search_no.txt").toString());
         Roles member = new Roles("m","p","MEMBER","m@example.com");
 
         int rc = runHandle("1\nNoSuchTitle\n", service, auth, member);
         assertEquals(0, rc);
     }
-
     @Test
     void search_withResults_returns0() {
         // ensure BookService writes to temp dir to avoid polluting project root
         Path originalCwd = Path.of(System.getProperty("user.dir"));
         try {
             System.setProperty("user.dir", tempDir.toString());
-            BookService service = new BookService();
-            service.addBook(new Book("Alpha","Author A","ISBN-ALPHA"));
+            BookService service = new BookService(tempDir.resolve("books_search_yes.txt").toString(),
+                    new BorrowRecordService(tempDir.resolve("borrow_records_yes.txt").toString()),
+                    new FineService(tempDir.resolve("fines_yes.txt").toString()));            service.addBook(new Book("Alpha","Author A","ISBN-ALPHA"));
 
             AuthService auth = new AuthService(tempDir.resolve("u_search_yes.txt").toString());
             Roles member = new Roles("m","p","MEMBER","m@example.com");
@@ -62,19 +66,20 @@ public class MemberTest {
         Path originalCwd = Path.of(System.getProperty("user.dir"));
         try {
             System.setProperty("user.dir", tempDir.toString());
-            BookService service = new BookService();
+            BookService service = new BookService(tempDir.resolve("books_borrow_success.txt").toString(),
+                    new BorrowRecordService(tempDir.resolve("borrow_records_borrow.txt").toString()),
+                    new FineService(tempDir.resolve("fines_borrow.txt").toString()));
             Book book = new Book("BorrowMe","Auth","B123");
             service.addBook(book);
 
             AuthService auth = new AuthService(tempDir.resolve("u_borrow.txt").toString());
             Roles member = new Roles("m","p","MEMBER","m@example.com");
 
-            int rc = runHandle("2\nB123\n7\n", service, auth, member);
+            int rc = runHandle("2\nB123\n", service, auth, member);
             assertEquals(0, rc);
-            // book should be unavailable and have a dueDate approx now + 7 days
             assertFalse(book.isAvailable());
             assertNotNull(book.getDueDate());
-            assertTrue(book.getDueDate().isAfter(LocalDate.now()));
+            assertEquals(LocalDate.now().plusDays(28), book.getDueDate());
         } finally {
             System.setProperty("user.dir", originalCwd.toString());
         }
@@ -82,44 +87,35 @@ public class MemberTest {
 
     @Test
     void borrow_invalidIsbn_noChange() {
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_borrow_invalid.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records_invalid.txt").toString()),
+                new FineService(tempDir.resolve("fines_invalid.txt").toString()));
         Book book = new Book("X","A","B999");
         service.addBook(book);
 
         AuthService auth = new AuthService(tempDir.resolve("u_borrow_no.txt").toString());
         Roles member = new Roles("m","p","MEMBER","m@example.com");
 
-        int rc = runHandle("2\nNOISBN\n7\n", service, auth, member);
+        int rc = runHandle("2\nNOISBN\n", service, auth, member);
         assertEquals(0, rc);
         assertTrue(book.isAvailable());
-    }
 
-    @Test
-    void borrow_invalidDays_noChange() {
-        BookService service = new BookService();
-        Book book = new Book("Y","A","B100");
-        service.addBook(book);
-
-        AuthService auth = new AuthService(tempDir.resolve("u_borrow_invalid_days.txt").toString());
-        Roles member = new Roles("m","p","MEMBER","m@example.com");
-
-        int rc = runHandle("2\nB100\nnotanumber\n", service, auth, member);
-        assertEquals(0, rc);
-        assertTrue(book.isAvailable());
     }
 
     @Test
     void borrow_notAvailable_reportsAndNoChange() {
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_borrow_na.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records_na.txt").toString()),
+                new FineService(tempDir.resolve("fines_na.txt").toString()));
         Book book = new Book("Z","A","B200");
         service.addBook(book);
         // make unavailable
-        service.borrowBook(book, 3);
+        service.borrowBook(book, "m");
 
         AuthService auth = new AuthService(tempDir.resolve("u_borrow_na.txt").toString());
         Roles member = new Roles("m","p","MEMBER","m@example.com");
 
-        int rc = runHandle("2\nB200\n5\n", service, auth, member);
+        int rc = runHandle("2\nB200\n", service, auth, member);
         assertEquals(0, rc);
         assertFalse(book.isAvailable());
     }
@@ -129,10 +125,12 @@ public class MemberTest {
         Path originalCwd = Path.of(System.getProperty("user.dir"));
         try {
             System.setProperty("user.dir", tempDir.toString());
-            BookService service = new BookService();
+            BookService service = new BookService(tempDir.resolve("books_return_success.txt").toString(),
+                    new BorrowRecordService(tempDir.resolve("borrow_records_return.txt").toString()),
+                    new FineService(tempDir.resolve("fines_return.txt").toString()));
             Book book = new Book("ToReturn","A","R100");
             service.addBook(book);
-            service.borrowBook(book, 2);
+            service.borrowBook(book, "m");
             assertFalse(book.isAvailable());
 
             AuthService auth = new AuthService(tempDir.resolve("u_return.txt").toString());
@@ -149,7 +147,9 @@ public class MemberTest {
 
     @Test
     void return_notBorrowed_reportsAndNoChange() {
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_return_no.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records_return_no.txt").toString()),
+                new FineService(tempDir.resolve("fines_return_no.txt").toString()));
         Book book = new Book("NotBorrowed","A","R200");
         service.addBook(book);
 
@@ -169,27 +169,31 @@ public class MemberTest {
         Roles mem = auth.login("mem","mpwd");
         assertNotNull(mem);
 
-        BookService service = new BookService();
-        int rc = runHandle("5\n", service, auth, mem);
+        BookService service = new BookService(tempDir.resolve("books_logout.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records_logout.txt").toString()),
+                new FineService(tempDir.resolve("fines_logout.txt").toString()));
+        int rc = runHandle("6\n", service, auth, mem);
         assertEquals(1, rc);
         assertNull(auth.getCurrentUser());
     }
-
     @Test
     void exit_returns2() {
         AuthService auth = new AuthService(tempDir.resolve("u_exit_member.txt").toString());
         Roles mem = new Roles("m","p","MEMBER","m@example.com");
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_exit.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records_exit.txt").toString()),
+                new FineService(tempDir.resolve("fines_exit.txt").toString()));
 
-        int rc = runHandle("6\n", service, auth, mem);
+        int rc = runHandle("7\n", service, auth, mem);
         assertEquals(2, rc);
     }
-
     @Test
     void invalidOption_returns0() {
         AuthService auth = new AuthService(tempDir.resolve("u_invalid_member.txt").toString());
         Roles mem = new Roles("m","p","MEMBER","m@example.com");
-        BookService service = new BookService();
+        BookService service = new BookService(tempDir.resolve("books_invalid.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("borrow_records_invalid_opt.txt").toString()),
+                new FineService(tempDir.resolve("fines_invalid_opt.txt").toString()));
 
         int rc = runHandle("notanumber\n", service, auth, mem);
         assertEquals(0, rc);

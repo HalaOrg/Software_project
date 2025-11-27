@@ -1,19 +1,31 @@
 package edu.library.service;
 
 import edu.library.model.Book;
-
+import edu.library.model.BorrowRecord;
+import java.time.temporal.ChronoUnit;
 import java.io.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BookService {
-    private static final String FILE_PATH = "books.txt";
+    private final String bookFilePath;
+    private static final int STANDARD_LOAN_DAYS = 28;
+    private final BorrowRecordService borrowRecordService;
+    private final FineService fineService;
     private List<Book> books = new ArrayList<>();
 
+    public BookService() {
+        this("books.txt", new BorrowRecordService(), new FineService());
+    }
+    public BookService(String bookFilePath, BorrowRecordService borrowRecordService, FineService fineService) {
+        this.bookFilePath = bookFilePath;
+        this.borrowRecordService = borrowRecordService;
+        this.fineService = fineService;
+    }
     public void loadBooksFromFile() {
         books.clear();
-        File file = new File(FILE_PATH);
+        File file = new File(bookFilePath);
         if (!file.exists()) {
             System.out.println("No book file found, creating new one");
             try {
@@ -24,7 +36,7 @@ public class BookService {
             return;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(bookFilePath))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
@@ -43,7 +55,7 @@ public class BookService {
     }
 
     public void saveBookToFile(Book book) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(bookFilePath, true))) {
             writer.write(String.format("%s,%s,%s,%s,%s%n",
                     book.getTitle(), book.getAuthor(), book.getIsbn(),
                     book.isAvailable(), book.getDueDate() != null ? book.getDueDate() : "null"));
@@ -53,7 +65,7 @@ public class BookService {
     }
 
     public void saveAllBooksToFile() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(bookFilePath))) {
             for (Book b : books) {
                 writer.write(String.format("%s,%s,%s,%s,%s%n",
                         b.getTitle(), b.getAuthor(), b.getIsbn(),
@@ -62,6 +74,7 @@ public class BookService {
         } catch (IOException e) {
             System.out.println("Error saving books: " + e.getMessage());
         }
+
     }
 
     public void addBook(Book book) {
@@ -92,29 +105,65 @@ public class BookService {
             }
         }
     }
-
-    public boolean borrowBook(Book book, int days) {
+    public boolean borrowBook(Book book, String username) {
+        if (book == null || username == null) return false;
+        if (fineService.getBalance(username) > 0) {
+            System.out.println("Outstanding fines must be paid before borrowing.");
+            return false;
+        }
         if (!book.isAvailable()) return false;
+        LocalDate dueDate = LocalDate.now().plusDays(STANDARD_LOAN_DAYS);
         book.setAvailable(false);
-        book.setDueDate(LocalDate.now().plusDays(days));
+        book.setDueDate(dueDate);
         saveAllBooksToFile();
+        borrowRecordService.recordBorrow(username, book.getIsbn(), dueDate);
         return true;
     }
 
-    public boolean returnBook(Book book) {
-        if (book.isAvailable()) return false;
+    public boolean returnBook(Book book, String username) {
+        if (book == null || book.isAvailable()) return false;
+        LocalDate originalDue = book.getDueDate();
+        LocalDate returnDate = LocalDate.now();
         book.setAvailable(true);
         book.setDueDate(null);
         saveAllBooksToFile();
+        borrowRecordService.recordReturn(username, book.getIsbn(), returnDate);
+        if (originalDue != null && returnDate.isAfter(originalDue)) {
+            int fine = (int) ChronoUnit.DAYS.between(originalDue, returnDate) * 10;
+            fineService.addFine(username, fine);
+        }
         return true;
     }
 
     public int calculateFine(Book book) {
         if (!book.isOverdue()) return 0;
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(book.getDueDate(), LocalDate.now()) * 10;
+        return (int) ChronoUnit.DAYS.between(book.getDueDate(), LocalDate.now()) * 10;
     }
+
+    public List<Book> getOverdueBooks() {
+        List<Book> overdue = new ArrayList<>();
+        for (Book book : books) {
+            if (book.isOverdue()) {
+                overdue.add(book);
+            }
+        }
+        return overdue;
+    }
+
 
     public List<Book> getBooks() {
         return books;
+    }
+
+    public List<BorrowRecord> getBorrowRecords() {
+        return borrowRecordService.getRecords();
+    }
+
+    public int getOutstandingFine(String username) {
+        return fineService.getBalance(username);
+    }
+
+    public int payFine(String username, int amount) {
+        return fineService.payFine(username, amount);
     }
 }

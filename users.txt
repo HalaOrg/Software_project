@@ -2,8 +2,3 @@ hala,123,ADMIN,halaeid807@gmail.com
 leen,111,MEMBER,leeneid@gmail.com
 haa11,11,MEMBER,halaeid88@gmail.com
 thaer,123,LIBRARIAN,Thaereid@gmail.com
-u2,p2,MEMBER,valid@example.com
-dupuser,pw,MEMBER,dup@example.com
-newuser,newpass,MEMBER,user@example.com
-u4,pw4,MEMBER,b@x.com
-u3,pw3,MEMBER,a@x.com
