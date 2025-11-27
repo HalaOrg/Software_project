@@ -7,6 +7,7 @@ import java.io.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class BookService {
     private final String bookFilePath;
@@ -161,6 +162,10 @@ public class BookService {
 
     public int getOutstandingFine(String username) {
         return fineService.getBalance(username);
+    }
+
+    public Map<String, Integer> getAllFines() {
+        return fineService.getAllBalances();
     }
 
     public int payFine(String username, int amount) {
