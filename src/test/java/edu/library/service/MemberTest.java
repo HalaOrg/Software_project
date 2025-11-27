@@ -46,7 +46,8 @@ public class MemberTest {
             System.setProperty("user.dir", tempDir.toString());
             BookService service = new BookService(tempDir.resolve("books_search_yes.txt").toString(),
                     new BorrowRecordService(tempDir.resolve("borrow_records_yes.txt").toString()),
-                    new FineService(tempDir.resolve("fines_yes.txt").toString()));            service.addBook(new Book("Alpha","Author A","ISBN-ALPHA"));
+                    new FineService(tempDir.resolve("fines_yes.txt").toString()));
+            service.addBook(new Book("Alpha","Author A","ISBN-ALPHA"));
 
             AuthService auth = new AuthService(tempDir.resolve("u_search_yes.txt").toString());
             Roles member = new Roles("m","p","MEMBER","m@example.com");
