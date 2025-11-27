@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -98,5 +99,35 @@ public class BorrowRecordServiceTest {
     @Test
     void constructor_createsFileIfMissing() {
         assertTrue(Files.exists(recordsFile));
+    }
+
+    // --- New tests to increase branch coverage ---
+
+    @Test
+    void loadRecords_throwsOnMalformedDate() throws IOException {
+        // write a line with bad date format for dueDate
+        Files.write(recordsFile, List.of("u1,ISBNX,notadate,false,null"), StandardCharsets.UTF_8);
+        assertThrows(java.time.format.DateTimeParseException.class, () -> new BorrowRecordService(recordsFile.toString()));
+    }
+
+    @Test
+    void getRecords_returnsCopy_notBackingList() {
+        service.recordBorrow("copyu", "C-1", LocalDate.now().plusDays(2));
+        List<BorrowRecord> returned = service.getRecords();
+        assertEquals(1, returned.size());
+        returned.clear();
+        // underlying service list should remain unchanged
+        assertEquals(1, service.getRecords().size());
+    }
+
+    @Test
+    void recordBorrow_persistsNullFields_asNullTokensInFile() throws IOException {
+        service.recordBorrow(null, null, null);
+        List<String> lines = Files.readAllLines(recordsFile);
+        assertEquals(1, lines.size());
+        String line = lines.get(0);
+        // expect 'null' tokens in the comma-separated line
+        assertTrue(line.startsWith("null,null,null"));
+        assertTrue(line.contains("false"));
     }
 }

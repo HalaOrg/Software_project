@@ -333,4 +333,27 @@ class AuthServiceTest {
         // getCurrentAdmin currently returns the same currentUser instance
         assertSame(auth.getCurrentUser(), auth.getCurrentAdmin());
     }
+
+    // --- New tests to cover previously-uncovered branches ---
+
+    @Test
+    void removeUser_null_returnsFalse() {
+        Path usersFile = tempDir.resolve("users.txt");
+        AuthService auth = new AuthService(usersFile.toString());
+        assertFalse(auth.removeUser(null));
+    }
+
+    @Test
+    void loadUsers_skipsMalformedLines() throws IOException {
+        Path usersFile = tempDir.resolve("users.txt");
+        Files.write(usersFile, Arrays.asList(
+                "shortline",
+                "good,user, MEMBER,good@example.com"
+        ));
+
+        AuthService auth = new AuthService(usersFile.toString());
+        // 'shortline' should be ignored, 'good' should be loaded
+        assertFalse(auth.userExists("shortline"));
+        assertTrue(auth.userExists("good"));
+    }
 }

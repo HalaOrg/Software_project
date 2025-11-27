@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -60,5 +61,76 @@ public class FineServiceTest {
     void constructor_createsFileIfMissing() throws IOException {
         assertTrue(Files.exists(finesFile));
         assertTrue(Files.size(finesFile) >= 0);
+    }
+
+    // --- New tests to improve branch coverage ---
+
+    @Test
+    void addFine_ignoresNullOrNonPositiveAmount_andDoesNotPersist() throws IOException {
+        // null username should be ignored
+        fineService.addFine(null, 10);
+        assertEquals(0, fineService.getBalance(null));
+        assertEquals(0, fineService.getAllBalances().size());
+
+        // non-positive amounts should be ignored and not create file entries
+        fineService.addFine("user1", 0);
+        fineService.addFine("user2", -5);
+        assertEquals(0, fineService.getBalance("user1"));
+        assertEquals(0, fineService.getBalance("user2"));
+
+        // file should still be empty (no entries persisted)
+        String content = new String(Files.readAllBytes(finesFile), StandardCharsets.UTF_8);
+        assertTrue(content.trim().isEmpty());
+    }
+
+    @Test
+    void payFine_withNullOrNonPositiveInputs_returnsUnchanged() {
+        fineService.addFine("payer", 40);
+
+        // null username -> returns current balance for null (which is 0)
+        int r = fineService.payFine(null, 5);
+        assertEquals(0, r);
+
+        // non-positive amount -> should return current balance unchanged
+        int before = fineService.getBalance("payer");
+        int after = fineService.payFine("payer", 0);
+        assertEquals(before, after);
+
+        after = fineService.payFine("payer", -10);
+        assertEquals(before, after);
+    }
+
+    @Test
+    void constructor_throws_onMalformedFile() throws IOException {
+        // create a file with a malformed balance (non-integer)
+        Files.write(finesFile, "alice,notanumber\n".getBytes(StandardCharsets.UTF_8));
+
+        // constructing FineService should attempt to load and fail with NumberFormatException
+        assertThrows(NumberFormatException.class, () -> new FineService(finesFile.toString()));
+    }
+
+    @Test
+    void getAllBalances_returnsACopy_notBackingMap() {
+        fineService.addFine("copytest", 7);
+        Map<String, Integer> copy = fineService.getAllBalances();
+        // mutate returned map
+        copy.put("copytest", 999);
+        // internal balance should remain unchanged
+        assertEquals(7, fineService.getBalance("copytest"));
+    }
+
+    @Test
+    void save_persistsMultipleEntries_andFileContainsBoth() throws IOException {
+        fineService.addFine("a", 1);
+        fineService.addFine("b", 2);
+
+        String content = new String(Files.readAllBytes(finesFile), StandardCharsets.UTF_8);
+        assertTrue(content.contains("a,1"));
+        assertTrue(content.contains("b,2"));
+
+        // also verify reloading reads both
+        FineService reloaded = new FineService(finesFile.toString());
+        assertEquals(1, reloaded.getBalance("a"));
+        assertEquals(2, reloaded.getBalance("b"));
     }
 }

@@ -2,8 +2,6 @@ package edu.library.service;
 
 import edu.library.model.Book;
 import org.junit.jupiter.api.*;
-import edu.library.service.BorrowRecordService;
-import edu.library.service.FineService;
 import org.junit.jupiter.api.io.TempDir;
 import java.time.LocalDate;
 import java.util.List;
@@ -128,5 +126,55 @@ public class BookServiceTest {
 
         assertTrue(service.deleteBook(book2.getIsbn()));
         assertFalse(service.searchBook(book2.getIsbn()).stream().findFirst().isPresent());
+    }
+
+    // --- New tests to increase branch coverage ---
+
+    @Test
+    void updateBookQuantity_negativeNewQuantity_returnsFalse() {
+        assertFalse(service.updateBookQuantity(book1.getIsbn(), -3));
+    }
+
+    @Test
+    void updateBookQuantity_nonExistentIsbn_returnsFalse() {
+        assertFalse(service.updateBookQuantity("no-such-isbn", 2));
+    }
+
+    @Test
+    void deleteBook_nullIsbn_returnsFalse() {
+        assertFalse(service.deleteBook(null));
+    }
+
+    @Test
+    void searchBook_isbnCaseInsensitive_matches() {
+        List<Book> found = service.searchBook("12345");
+        assertTrue(found.stream().anyMatch(b -> b.getIsbn().equalsIgnoreCase("12345")));
+        // different case
+        found = service.searchBook("54321");
+        assertTrue(found.stream().anyMatch(b -> b.getIsbn().equalsIgnoreCase("54321")));
+    }
+
+    @Test
+    void borrowBook_nullInputs_returnsFalse() {
+        assertFalse(service.borrowBook(null, "user"));
+        assertFalse(service.borrowBook(book1, null));
+    }
+
+    @Test
+    void borrowBook_withOutstandingFines_returnsFalse() {
+        // create a FineService instance that is shared with the BookService so we can add fines to it
+        FineService fs = new FineService(tempDir.resolve("fines.txt").toString());
+        // create a fresh BookService that uses this FineService
+        service = new BookService(tempDir.resolve("books.txt").toString(), borrowRecordService, fs);
+        Book local1 = new Book("Local1", "Author", "L-ISBN-1", 1);
+        service.addBook(local1);
+        fs.addFine("finedUser", 50);
+        assertEquals(50, fs.getBalance("finedUser"));
+        assertFalse(service.borrowBook(local1, "finedUser"));
+    }
+
+    @Test
+    void findBookByIsbn_null_returnsNull() {
+        assertNull(service.findBookByIsbn(null));
     }
 }

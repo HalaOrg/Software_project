@@ -19,7 +19,7 @@ public class BookTest {
 
     @Test
     void testSetAvailabilityAndDueDate() {
-        Book b = new Book("Title", "A", "222", false, null);
+        Book b = new Book("Title", "A", "222");
         b.setAvailable(true);
         b.setDueDate(LocalDate.now().plusDays(5));
         assertTrue(b.isAvailable());
@@ -45,12 +45,14 @@ public class BookTest {
         assertTrue(text.contains("Available"));
     }
 
-    // --- Additional comprehensive tests below ---
 
     @Test
     void testSecondConstructorAndGetters() {
         LocalDate due = LocalDate.of(2024, 12, 31);
-        Book b = new Book("Sec", "Auth", "555", false, due);
+        // replace 5-arg constructor with setters
+        Book b = new Book("Sec", "Auth", "555");
+        b.setAvailable(false);
+        b.setDueDate(due);
         assertEquals("Sec", b.getTitle());
         assertEquals("Auth", b.getAuthor());
         assertEquals("555", b.getIsbn());
