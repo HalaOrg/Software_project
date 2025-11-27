@@ -28,6 +28,25 @@ public class BorrowRecordService {
         return new ArrayList<>(records);
     }
 
+    public BorrowRecord findActiveBorrowRecord(String username, String isbn) {
+        for (BorrowRecord record : records) {
+            if (!record.isReturned() && record.getUsername().equals(username) && record.getIsbn().equals(isbn)) {
+                return record;
+            }
+        }
+        return null;
+    }
+
+    public List<BorrowRecord> getActiveBorrowRecordsForUser(String username) {
+        List<BorrowRecord> result = new ArrayList<>();
+        for (BorrowRecord record : records) {
+            if (!record.isReturned() && record.getUsername().equals(username)) {
+                result.add(record);
+            }
+        }
+        return result;
+    }
+
     public void recordBorrow(String username, String isbn, LocalDate dueDate) {
         BorrowRecord record = new BorrowRecord(username, isbn, dueDate, false, null);
         records.add(record);

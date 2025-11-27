@@ -33,7 +33,7 @@ public class LibrerianTest {
         AuthService auth = new AuthService(tempDir.resolve("u_add.txt").toString());
         Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
 
-        String input = "1\nMy Book\nSome Author\nISBN-1\n";
+        String input = "1\nMy Book\nSome Author\nISBN-1\n3\n";
         int rc = runHandle(input, service, auth, lib);
         assertEquals(0, rc);
 
@@ -82,7 +82,7 @@ public class LibrerianTest {
         assertNotNull(r);
 
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-        String input = "6\n";
+        String input = "8\n";
         int rc = runHandle(input, service, auth, r);
         assertEquals(1, rc);
         assertNull(auth.getCurrentUser());
@@ -94,8 +94,24 @@ public class LibrerianTest {
         Roles r = new Roles("x","p","LIBRARIAN","x@example.com");
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
 
-        int rc = runHandle("7\n", service, auth, r);
+        int rc = runHandle("9\n", service, auth, r);
         assertEquals(2, rc);
+    }
+
+    @Test
+    void updateQuantityAndDeleteBookOptions() {
+        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
+        AuthService auth = new AuthService(tempDir.resolve("u_update.txt").toString());
+        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
+        service.addBook(new Book("Keep","Auth","UP-1",2));
+
+        int rcUpdate = runHandle("6\nUP-1\n5\n", service, auth, lib);
+        assertEquals(0, rcUpdate);
+        assertEquals(5, service.searchBook("UP-1").get(0).getTotalCopies());
+
+        int rcDelete = runHandle("7\nUP-1\n", service, auth, lib);
+        assertEquals(0, rcDelete);
+        assertTrue(service.searchBook("UP-1").isEmpty());
     }
 
     @Test
