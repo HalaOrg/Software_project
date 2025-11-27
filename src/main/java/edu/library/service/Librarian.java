@@ -22,8 +22,10 @@ public class Librarian {
         System.out.println("3. Search Book");
         System.out.println("4. View Borrow Records & Overdue Status");
         System.out.println("5. View Fine Balances");
-        System.out.println("6. Logout");
-        System.out.println("7. Exit");
+        System.out.println("6. Update Book Quantity");
+        System.out.println("7. Delete Book");
+        System.out.println("8. Logout");
+        System.out.println("9. Exit");
         System.out.print("Choose option: ");
         String opt = input.nextLine();
         int optInt;
@@ -36,7 +38,13 @@ public class Librarian {
                 String author = input.nextLine();
                 System.out.print("Enter ISBN: ");
                 String isbn = input.nextLine();
-                service.addBook(new Book(title, author, isbn));
+                System.out.print("Enter quantity: ");
+                int qty = readInt(input, 1);
+                if (qty < 1) {
+                    System.out.println("Quantity must be at least 1.");
+                    return 0;
+                }
+                service.addBook(new Book(title, author, isbn, qty));
                 return 0;
             case 2:
                 service.displayBooks();
@@ -59,6 +67,26 @@ public class Librarian {
                 displayFineBalances(service);
                 return 0;
             case 6:
+                System.out.print("Enter ISBN to update quantity: ");
+                String isbnUpdate = input.nextLine();
+                System.out.print("Enter new total quantity: ");
+                int newQty = readInt(input, 0);
+                if (service.updateBookQuantity(isbnUpdate, newQty)) {
+                    System.out.println("Quantity updated for ISBN " + isbnUpdate);
+                } else {
+                    System.out.println("Could not update quantity (book not found or invalid number).");
+                }
+                return 0;
+            case 7:
+                System.out.print("Enter ISBN to delete: ");
+                String isbnDelete = input.nextLine();
+                if (service.deleteBook(isbnDelete)) {
+                    System.out.println("Deleted book with ISBN: " + isbnDelete);
+                } else {
+                    System.out.println("Book not found.");
+                }
+                return 0;
+            case 8:
                 if (auth.logout()) {
                     System.out.println("✅ Logged out successfully.");
                     return 1;
@@ -66,7 +94,7 @@ public class Librarian {
                     System.out.println("⚠️ No user is currently logged in.");
                     return 0;
                 }
-            case 7:
+            case 9:
                 System.out.println("👋 Exiting...");
                 return 2;
             default:
@@ -109,6 +137,17 @@ public class Librarian {
         System.out.println("Outstanding fines:");
         for (Map.Entry<String, Integer> entry : fines.entrySet()) {
             System.out.println(entry.getKey() + ": " + entry.getValue() + " NIS");
+        }
+    }
+
+    private static int readInt(Scanner input, int minValue) {
+        String value = input.nextLine();
+        try {
+            int parsed = Integer.parseInt(value.trim());
+            if (parsed < minValue) return -1;
+            return parsed;
+        } catch (NumberFormatException e) {
+            return -1;
         }
     }
 }

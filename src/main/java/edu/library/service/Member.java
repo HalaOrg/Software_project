@@ -1,8 +1,11 @@
 package edu.library.service;
 
 import edu.library.model.Book;
+import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Scanner;
 
@@ -18,8 +21,9 @@ public class Member {
         System.out.println("3. Return Book (by ISBN)");
         System.out.println("4. Display All Books");
         System.out.println("5. Pay Fines");
-        System.out.println("6. Logout");
-        System.out.println("7. Exit");
+        System.out.println("6. View Remaining Time for My Borrowed Books");
+        System.out.println("7. Logout");
+        System.out.println("8. Exit");
         System.out.print("Choose option: ");
 
         String opt = input.nextLine();
@@ -47,7 +51,7 @@ public class Member {
             case 2: {
                 System.out.print("Enter ISBN to borrow: ");
                 String isbnBorrow = input.nextLine();
-                Book bookToBorrow = findBookByIsbn(service, isbnBorrow);
+                Book bookToBorrow = service.findBookByIsbn(isbnBorrow);
                 if (bookToBorrow == null) {
                     System.out.println("Book not found.");
                     return 0;
@@ -68,12 +72,14 @@ public class Member {
             case 3: {
                 System.out.print("Enter ISBN to return: ");
                 String isbnReturn = input.nextLine();
-                Book bookToReturn = findBookByIsbn(service, isbnReturn);
+                Book bookToReturn = service.findBookByIsbn(isbnReturn);
                 if (bookToReturn == null) {
                     System.out.println("Book not found.");
                     return 0;
                 }
-                if (bookToReturn.isAvailable()) {
+                boolean hasActiveLoan = service.getActiveBorrowRecordsForUser(user.getUsername()).stream()
+                        .anyMatch(r -> r.getIsbn().equalsIgnoreCase(isbnReturn));
+                if (!hasActiveLoan) {
                     System.out.println("This book is not borrowed.");
                     return 0;
                 }
@@ -120,6 +126,22 @@ public class Member {
                 return 0;
             }
             case 6: {
+                List<BorrowRecord> activeBorrows = service.getActiveBorrowRecordsForUser(user.getUsername());
+                if (activeBorrows.isEmpty()) {
+                    System.out.println("You have no active borrowed books.");
+                    return 0;
+                }
+                for (BorrowRecord record : activeBorrows) {
+                    long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
+                    if (daysRemaining < 0) {
+                        System.out.println("ISBN: " + record.getIsbn() + " is overdue by " + Math.abs(daysRemaining) + " day(s).");
+                    } else {
+                        System.out.println("ISBN: " + record.getIsbn() + " - " + daysRemaining + " day(s) remaining.");
+                    }
+                }
+                return 0;
+            }
+            case 7: {
                 if (auth.logout()) {
                     System.out.println("✅ Logged out successfully.");
                     return 1;
@@ -128,7 +150,7 @@ public class Member {
                     return 0;
                 }
             }
-            case 7: {
+            case 8: {
                 System.out.println("👋 Exiting...");
                 return 2;
             }
@@ -137,13 +159,5 @@ public class Member {
                 return 0;
             }
         }
-    }
-
-    private static Book findBookByIsbn(BookService service, String isbn) {
-        if (isbn == null) return null;
-        for (Book b : service.getBooks()) {
-            if (isbn.equalsIgnoreCase(b.getIsbn())) return b;
-        }
-        return null;
     }
 }

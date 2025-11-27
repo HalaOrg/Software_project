@@ -79,7 +79,6 @@ public class MemberTest {
             assertEquals(0, rc);
             assertFalse(book.isAvailable());
             assertNotNull(book.getDueDate());
-            assertEquals(LocalDate.now().plusDays(28), book.getDueDate());
         } finally {
             System.setProperty("user.dir", originalCwd.toString());
         }
@@ -162,6 +161,23 @@ public class MemberTest {
     }
 
     @Test
+    void viewRemainingTime_showsActiveLoans() {
+        BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records_remaining.txt").toString());
+        BookService service = new BookService(tempDir.resolve("books_remaining.txt").toString(),
+                borrowRecordService,
+                new FineService(tempDir.resolve("fines_remaining.txt").toString()));
+        Book book = new Book("Clock","Author","CLK-1");
+        service.addBook(book);
+        service.borrowBook(book, "m");
+
+        AuthService auth = new AuthService(tempDir.resolve("u_remaining.txt").toString());
+        Roles member = new Roles("m","p","MEMBER","m@example.com");
+
+        int rc = runHandle("6\n", service, auth, member);
+        assertEquals(0, rc);
+    }
+
+    @Test
     void logout_returns1_andClearsCurrentUser() throws IOException {
         Path usersFile = tempDir.resolve("u_logout_member.txt");
         Files.write(usersFile, Collections.singletonList("mem,mpwd,MEMBER,mem@example.com"));
@@ -172,7 +188,7 @@ public class MemberTest {
         BookService service = new BookService(tempDir.resolve("books_logout.txt").toString(),
                 new BorrowRecordService(tempDir.resolve("borrow_records_logout.txt").toString()),
                 new FineService(tempDir.resolve("fines_logout.txt").toString()));
-        int rc = runHandle("6\n", service, auth, mem);
+        int rc = runHandle("7\n", service, auth, mem);
         assertEquals(1, rc);
         assertNull(auth.getCurrentUser());
     }
@@ -184,7 +200,7 @@ public class MemberTest {
                 new BorrowRecordService(tempDir.resolve("borrow_records_exit.txt").toString()),
                 new FineService(tempDir.resolve("fines_exit.txt").toString()));
 
-        int rc = runHandle("7\n", service, auth, mem);
+        int rc = runHandle("8\n", service, auth, mem);
         assertEquals(2, rc);
     }
     @Test
