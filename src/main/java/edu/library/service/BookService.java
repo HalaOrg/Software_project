@@ -6,6 +6,7 @@ import java.time.temporal.ChronoUnit;
 import java.io.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.List;
 
 public class BookService {
@@ -162,7 +163,9 @@ public class BookService {
     public int getOutstandingFine(String username) {
         return fineService.getBalance(username);
     }
-
+    public Map<String, Integer> getAllFines() {
+        return fineService.getAllBalances();
+    }
     public int payFine(String username, int amount) {
         return fineService.payFine(username, amount);
     }
