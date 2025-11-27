@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 public class BookServiceTest {
     private BookService service;
+    private BorrowRecordService borrowRecordService;
     private Book book1;
     private Book book2;
 
@@ -25,13 +26,14 @@ public class BookServiceTest {
         originalCwd = Path.of(System.getProperty("user.dir"));
         System.setProperty("user.dir", tempDir.toString());
 
+        borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records.txt").toString());
         service = new BookService(tempDir.resolve("books.txt").toString(),
-                new BorrowRecordService(tempDir.resolve("borrow_records.txt").toString()),
+                borrowRecordService,
                 new FineService(tempDir.resolve("fines.txt").toString()));
         service.loadBooksFromFile();
 
-        book1 = new Book("The Hobbit", "Tolkien", "12345");
-        book2 = new Book("LOTR", "Tolkien", "54321");
+        book1 = new Book("The Hobbit", "Tolkien", "12345", 1);
+        book2 = new Book("LOTR", "Tolkien", "54321", 2);
         service.addBook(book1);
         service.addBook(book2);
     }
@@ -48,7 +50,7 @@ public class BookServiceTest {
 
     @Test
     void testAddBook() {
-        Book book = new Book("Clean Code", "Robert Martin", "999");
+        Book book = new Book("Clean Code", "Robert Martin", "999", 3);
         int before = service.getBooks().size();
         service.addBook(book);
         // list size should increase by one and contain the new title
@@ -73,7 +75,7 @@ public class BookServiceTest {
         boolean result = service.borrowBook(book1, "member");
         assertTrue(result);
         assertFalse(book1.isAvailable());
-        assertEquals(LocalDate.now().plusDays(28), book1.getDueDate());
+        assertEquals(0, book1.getAvailableCopies());
     }
 
     @Test
@@ -81,6 +83,14 @@ public class BookServiceTest {
         service.borrowBook(book1, "member");
         boolean result = service.borrowBook(book1, "member");
         assertFalse(result);
+    }
+
+    @Test
+    void testBorrowBookFailWhenNoCopiesForDifferentUser() {
+        service.borrowBook(book1, "member1");
+        boolean result = service.borrowBook(book1, "member2");
+        assertFalse(result);
+        assertEquals(0, book1.getAvailableCopies());
     }
 
     @Test
@@ -100,17 +110,23 @@ public class BookServiceTest {
 
     @Test
     void testOverdueDetection() {
-        book2.setAvailable(false);
-        book2.setDueDate(LocalDate.now().minusDays(3));
-        assertTrue(book2.isOverdue());
+        borrowRecordService.recordBorrow("member2", book2.getIsbn(), LocalDate.now().minusDays(3));
         assertTrue(service.getOverdueBooks().contains(book2));
     }
 
     @Test
     void testCalculateFine() {
-        book2.setAvailable(false);
-        book2.setDueDate(LocalDate.now().minusDays(3));
+        borrowRecordService.recordBorrow("member2", book2.getIsbn(), LocalDate.now().minusDays(3));
         int fine = service.calculateFine(book2);
         assertEquals(3 * 10, fine);
+    }
+
+    @Test
+    void updateQuantityAndDeleteBook() {
+        assertTrue(service.updateBookQuantity(book2.getIsbn(), 5));
+        assertEquals(5, service.searchBook(book2.getIsbn()).get(0).getTotalCopies());
+
+        assertTrue(service.deleteBook(book2.getIsbn()));
+        assertFalse(service.searchBook(book2.getIsbn()).stream().findFirst().isPresent());
     }
 }
