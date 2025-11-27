@@ -8,9 +8,7 @@ import java.util.List;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
-
 public class BookServiceTest {
-
     private BookService service;
     private Book book1;
     private Book book2;
