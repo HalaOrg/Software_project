@@ -44,4 +44,54 @@ public class BookTest {
         assertTrue(text.contains("Clean Code"));
         assertTrue(text.contains("Available"));
     }
+
+    // --- Additional comprehensive tests below ---
+
+    @Test
+    void testSecondConstructorAndGetters() {
+        LocalDate due = LocalDate.of(2024, 12, 31);
+        Book b = new Book("Sec", "Auth", "555", false, due);
+        assertEquals("Sec", b.getTitle());
+        assertEquals("Auth", b.getAuthor());
+        assertEquals("555", b.getIsbn());
+        assertFalse(b.isAvailable());
+        assertEquals(due, b.getDueDate());
+    }
+
+    @Test
+    void testSettersWork() {
+        Book b = new Book("Old", "A", "101");
+        b.setTitle("New Title");
+        b.setAuthor("New Author");
+        b.setIsbn("202");
+        assertEquals("New Title", b.getTitle());
+        assertEquals("New Author", b.getAuthor());
+        assertEquals("202", b.getIsbn());
+    }
+
+    @Test
+    void testIsOverdue_whenAvailableTrue_returnsFalse() {
+        Book b = new Book("B", "A", "303");
+        // even if due date is in the past, availability should short-circuit to not overdue
+        b.setDueDate(LocalDate.now().minusDays(10));
+        b.setAvailable(true);
+        assertFalse(b.isOverdue());
+    }
+
+    @Test
+    void testIsOverdue_dueDateNull_returnsFalse() {
+        Book b = new Book("NoDue", "A", "404");
+        b.setAvailable(false);
+        b.setDueDate(null);
+        assertFalse(b.isOverdue());
+    }
+
+    @Test
+    void testToString_showsNAWhenDueDateNull() {
+        Book b = new Book("NADemo", "Author", "505");
+        b.setDueDate(null);
+        String s = b.toString();
+        assertTrue(s.contains("NADemo"));
+        assertTrue(s.contains("N/A"));
+    }
 }

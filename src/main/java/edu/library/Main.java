@@ -2,100 +2,123 @@ package edu.library;
 
 import edu.library.model.Book;
 import edu.library.service.BookService;
-
-import java.util.List;
+import edu.library.model.Roles;
+import edu.library.service.AuthService;
+import edu.library.service.Admin;
+import edu.library.service.Member;
+import edu.library.service.Librarian;
 import java.util.Scanner;
+
 
 public class Main {
     public static void main(String[] args) {
         BookService service = new BookService();
+        service.loadBooksFromFile();
+        AuthService auth = new AuthService();
         Scanner input = new Scanner(System.in);
 
-        service.loadBooksFromFile();
-
         while (true) {
-            System.out.println("\n===== Library Menu =====");
-            System.out.println("1. Add Book");
-            System.out.println("2. Search Book");
-            System.out.println("3. Display All Books");
-            System.out.println("4. Borrow Book");
-            System.out.println("5. Return Book");
-            System.out.println("6. Exit");
+            System.out.println("\n=== Welcome to the Library System ===");
+            System.out.println("1. Sign up");
+            System.out.println("2. Login");
+            System.out.println("3. Exit");
             System.out.print("Choose option: ");
-            int choice = input.nextInt();
-            input.nextLine();
+            String line = input.nextLine();
+            int choice;
+            try {
+                choice = Integer.parseInt(line.trim());
+            } catch (Exception e) {
+                System.out.println("Invalid input");
+                continue;
+            }
 
-            switch (choice) {
-                case 1:
-                    System.out.print("Enter title: ");
-                    String title = input.nextLine();
-                    System.out.print("Enter author: ");
-                    String author = input.nextLine();
-                    System.out.print("Enter ISBN: ");
-                    String isbn = input.nextLine();
-                    Book newBook = new Book(title, author, isbn);
-                    service.addBook(newBook);
-                    break;
-
-                case 2:
-                    System.out.print("Enter title/author/ISBN to search: ");
-                    String keyword = input.nextLine();
-                    List<Book> foundBooks = service.searchBook(keyword);
-                    if (foundBooks.isEmpty()) {
-                        System.out.println(" No matching books found!");
-                    } else {
-                        System.out.println("Found books:");
-                        for (Book b : foundBooks) {
-                            System.out.println(b);
-                        }
+            if (choice == 1) {
+                String email;
+                while (true) {
+                    System.out.print("Enter email (required): ");
+                    email = input.nextLine().trim();
+                    if (email.isEmpty()) {
+                        System.out.println("Email is required and cannot be empty.");
+                        continue;
                     }
                     break;
+                }
 
-                case 3:
-                    service.displayBooks();
-                    break;
+                System.out.print("Enter username: ");
+                String username = input.nextLine().trim();
+                System.out.print("Enter password: ");
+                String password = input.nextLine().trim();
+                // Registration always creates a MEMBER by default
+                String role = "MEMBER";
 
-                case 4:
-                    System.out.print("Enter ISBN to borrow: ");
-                    String isbnBorrow = input.nextLine();
-                    Book bookToBorrow = service.searchBook(isbnBorrow).stream().findFirst().orElse(null);
-                    if (bookToBorrow != null) {
-                        if (service.borrowBook(bookToBorrow, 28)) {
-                            System.out.println("Book borrowed successfully, Due in 28 days");
-                        } else {
-                            System.out.println("Cannot borrow this book (maybe already borrowed).");
-                        }
-                    } else {
-                        System.out.println("Book not found!");
+                // check if username exists
+                boolean exists = false;
+                for (Roles r : auth.getUsers()) {
+                    if (r.getUsername().equalsIgnoreCase(username)) {
+                        exists = true;
+                        break;
                     }
-                    break;
+                }
+                if (exists) {
+                    System.out.println("Username already exists. Choose another.");
+                } else {
+                    auth.addUser(username, password, role, email);
+                    System.out.println("Registration successful. You can now login (role: MEMBER).");
+                }
+                continue;
+            }
 
-                case 5:
-                    System.out.print("Enter ISBN to return: ");
-                    String isbnReturn = input.nextLine();
-                    Book bookToReturn = service.searchBook(isbnReturn).stream().findFirst().orElse(null);
-                    if (bookToReturn != null) {
-                        if (service.returnBook(bookToReturn)) {
-                            System.out.println("Book returned successfully");
-                            if (bookToReturn.isOverdue()) {
-                                int fine = service.calculateFine(bookToReturn);
-                                System.out.println("Overdue fine: " + fine + " NIS");
-                            }
-                        } else {
-                            System.out.println("This book is not borrowed");
-                        }
+            if (choice == 2) {
+                System.out.print("Enter username: ");
+                String username = input.nextLine();
+                System.out.print("Enter password: ");
+                String password = input.nextLine();
+                Roles user = auth.login(username, password);
+                if (user == null) {
+                    System.out.println("❌ Invalid credentials.");
+                    continue;
+                }
+
+                System.out.println("✅ Logged in as: " + user.getUsername() + " (" + user.getRoleName() + ")");
+
+                // role-based menu loop
+                boolean sessionActive = true;
+                while (sessionActive) {
+                    int result;
+                    if (user.isAdmin()) {
+                        result = Admin.handle(input, service, auth, user);
+                    } else if (user.isMember()) {
+                        result = Member.handle(input, service, auth, user);
+                    } else if (user.isLibrarian()) {
+                        result = Librarian.handle(input, service, auth, user);
                     } else {
-                        System.out.println("Book not found");
+                        // unknown role: fallback to member behavior
+                        result = Member.handle(input, service, auth, user);
                     }
-                    break;
 
-                case 6:
-                    System.out.println("Exiting");
-                    return;
+                    if (result == 1) { // logout
+                        sessionActive = false;
+                    } else if (result == 2) { // exit app
+                        System.out.println("👋 Exiting...");
+                        return;
+                    }
+                }
+            }
 
-                default:
-                    System.out.println("Invalid option please Try again.");
+            if (choice == 3) {
+                System.out.println("👋 Exiting...");
+                return;
             }
         }
     }
+
+    private static Book findBookByIsbn(BookService service, String isbn) {
+        if (isbn == null) return null;
+        for (Book b : service.getBooks()) {
+            if (isbn.equalsIgnoreCase(b.getIsbn())) return b;
+        }
+        return null;
+    }
+
+
 }
