@@ -1,8 +1,6 @@
 package edu.library.fine;
 
-/**
- * Fine calculation strategy for books.
- */
+
 public class BookFineStrategy implements FineStrategy {
     private static final int RATE_PER_DAY = 10;
 

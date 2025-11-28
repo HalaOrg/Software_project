@@ -17,7 +17,7 @@ public class AuthService {
     private Roles currentUser;
 
     public AuthService() {
-        this(resolveDefault("users.txt"), null);
+        this(resolveDefault("users.txt"));
     }
 
     public AuthService(String filePath) {
@@ -160,13 +160,5 @@ public class AuthService {
     private static String resolveDefault(String filename) {
         String base = System.getProperty("user.dir", "");
         return new File(base, filename).getPath();
-    }
-
-    private void persistOutstandingFines(Roles user) {
-        if (fineService == null || user == null) return;
-        int balance = fineService.getBalance(user.getUsername());
-        if (balance > 0) {
-            fineService.saveBalances();
-        }
     }
 }
