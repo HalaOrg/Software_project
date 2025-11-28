@@ -110,6 +110,16 @@ public class AuthService {
         return new ArrayList<>(users);
     }
 
+    private void persistOutstandingFines(Roles user) {
+        if (fineService == null || user == null) {
+            return;
+        }
+        int balance = fineService.getBalance(user.getUsername());
+        if (balance > 0) {
+            fineService.saveBalances();
+        }
+    }
+
     private void loadUsersFromFile() {
         users.clear();
         File file = new File(filePath);
