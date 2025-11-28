@@ -114,10 +114,7 @@ public class AuthService {
         if (fineService == null || user == null) {
             return;
         }
-        int balance = fineService.getBalance(user.getUsername());
-        if (balance > 0) {
-            fineService.saveBalances();
-        }
+        fineService.storeBalanceOnLogin(user.getUsername());
     }
 
     private void loadUsersFromFile() {
