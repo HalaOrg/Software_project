@@ -33,9 +33,7 @@ class MainTest {
         System.setProperty("user.dir", originalUserDir);
     }
 
-    /**
-     * Helper: يشغّل Main.main بإدخال مزيّف ويعيد الـ output كنص.
-     */
+
     private String runMainWithInput(String input) throws Exception {
         InputStream originalIn = System.in;
         PrintStream originalOut = System.out;
@@ -127,7 +125,6 @@ class MainTest {
         AuthService authSetup = new AuthService();
         authSetup.addUser("admin", "1234", "ADMIN", "admin@example.com");
 
-        // نحاول login بكلمة سر غلط ثم نخرج بالخيار 3
         String input =
                 "2\n" +        // Login
                         "admin\n" +    // username
@@ -201,14 +198,11 @@ class MainTest {
 
         String output = runMainWithInput(input);
 
-        // نتأكد أنه دخل فعلاً
         assertTrue(output.contains("Logged in as: admin (ADMIN)") ||
                 output.contains("Logged in as: admin (ADMIN".replace("Logged in as: ", "✅ Logged in as: ")));
 
-        // نتأكد أنه عمل Logout (رسالة من Admin.handle)
         assertTrue(output.contains("Logged out successfully"));
 
-        // وطلع في الآخر
         assertTrue(output.contains("Exiting"));
     }
     @Test
@@ -229,12 +223,10 @@ class MainTest {
 
         String output = runMainWithInput(input);
 
-        // نتأكد أنه دخل فعلاً كـ admin
         assertTrue(output.contains("Logged in as: admin2 (ADMIN)") ||
                 output.contains("Logged in as: admin2 (ADMIN".replace("Logged in as: ", "✅ Logged in as: ")));
 
-        // الآن Admin.handle لما يختار 9 يرجع 2
-        // Main يشوف result == 2 ويطبع "Exiting..." ويعمل return;
+
         assertTrue(output.contains("Exiting"));
     }
     @Test
@@ -243,17 +235,13 @@ class MainTest {
         AuthService authSetup = new AuthService();
         authSetup.addUser("mem", "111", "MEMBER", "mem@example.com");
 
-        // السيناريو:
-        // 2  -> Login
-        // mem / 111 -> دخول ناجح
-        // 7  -> من منيو Member: Logout
-        // 3  -> من المنيو الرئيسي: Exit
+
         String input =
-                "2\n" +      // Main menu: Login
-                        "mem\n" +    // username
-                        "111\n" +    // password
-                        "7\n" +      // Member menu: 7 = Logout (يرجع 1)
-                        "3\n";       // Main menu: 3 = Exit
+                "2\n" +
+                        "mem\n" +
+                        "111\n" +
+                        "7\n" +
+                        "3\n";
 
         String output = runMainWithInput(input);
 
@@ -267,13 +255,8 @@ class MainTest {
         AuthService authSetup = new AuthService();
         authSetup.addUser("lib", "222", "LIBRARIAN", "lib@example.com");
 
-        // السيناريو:
-        // 2  -> Login
-        // lib / 222 -> دخول ناجح
-        // 8  -> من منيو Librarian: Logout
-        // 3  -> Exit من المنيو الرئيسي
         String input =
-                "2\n" +      // Main menu: Login
+                "2\n" +
                         "lib\n" +
                         "222\n" +
                         "8\n" +      // Librarian menu: 8 = Logout (يرجع 1)
@@ -285,6 +268,5 @@ class MainTest {
         assertTrue(output.contains("Logged out successfully"));
         assertTrue(output.contains("Exiting"));
     }
-
 
 }
