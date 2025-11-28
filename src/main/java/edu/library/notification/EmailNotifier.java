@@ -2,9 +2,7 @@ package edu.library.notification;
 
 import edu.library.model.Roles;
 
-/**
- * Observer implementation that delegates to an {@link EmailServer}.
- */
+
 public class EmailNotifier implements Observer {
     private final EmailServer emailServer;
 

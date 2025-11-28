@@ -31,4 +31,5 @@ class AuthServiceLoginFineTest {
         String persisted = Files.readString(finesFile);
         assertTrue(persisted.contains("member,40"));
     }
+
 }

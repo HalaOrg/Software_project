@@ -61,4 +61,5 @@ class ReminderServiceTest {
 
         verify(observer, never()).notify(any(), any());
     }
+
 }
