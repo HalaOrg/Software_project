@@ -54,9 +54,8 @@ public class ReminderService {
     }
 
     private Map<String, Long> calculateOverdueCounts() {
-        LocalDate today = timeProvider.today();
         return borrowRecordService.getRecords().stream()
-                .filter(record -> !record.isReturned() && record.getDueDate() != null && today.isAfter(record.getDueDate()))
+                .filter(record -> getOverdueDays(record) > 0)
                 .collect(Collectors.groupingBy(BorrowRecord::getUsername, Collectors.counting()));
     }
 

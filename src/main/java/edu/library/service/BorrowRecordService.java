@@ -16,7 +16,7 @@ public class BorrowRecordService {
     private final List<BorrowRecord> records = new ArrayList<>();
 
     public BorrowRecordService() {
-        this("borrow_records.txt");
+        this(resolveDefault("borrow_records.txt"));
     }
 
     public BorrowRecordService(String filePath) {
@@ -117,5 +117,10 @@ public class BorrowRecordService {
         } catch (IOException e) {
             System.out.println("Error saving borrow records: " + e.getMessage());
         }
+    }
+
+    private static String resolveDefault(String filename) {
+        String base = System.getProperty("user.dir", "");
+        return new File(base, filename).getPath();
     }
 }
