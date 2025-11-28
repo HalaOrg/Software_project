@@ -1,7 +1,10 @@
 package edu.library.service;
 
+import edu.library.fine.FineCalculator;
 import edu.library.model.Book;
 import edu.library.model.BorrowRecord;
+import edu.library.time.TimeProvider;
+import edu.library.time.SystemTimeProvider;
 import java.time.temporal.ChronoUnit;
 import java.io.*;
 import java.time.LocalDate;
@@ -14,15 +17,24 @@ public class BookService {
     private static final int STANDARD_LOAN_DAYS = 28;
     private final BorrowRecordService borrowRecordService;
     private final FineService fineService;
+    private final TimeProvider timeProvider;
+    private final FineCalculator fineCalculator;
     private List<Book> books = new ArrayList<>();
 
     public BookService() {
-        this("books.txt", new BorrowRecordService(), new FineService());
+        this("books.txt", new BorrowRecordService(), new FineService(), new SystemTimeProvider(), new FineCalculator());
     }
+
     public BookService(String bookFilePath, BorrowRecordService borrowRecordService, FineService fineService) {
+        this(bookFilePath, borrowRecordService, fineService, new SystemTimeProvider(), new FineCalculator());
+    }
+    public BookService(String bookFilePath, BorrowRecordService borrowRecordService, FineService fineService,
+                      TimeProvider timeProvider, FineCalculator fineCalculator) {
         this.bookFilePath = bookFilePath;
         this.borrowRecordService = borrowRecordService;
         this.fineService = fineService;
+        this.timeProvider = timeProvider;
+        this.fineCalculator = fineCalculator;
     }
     public void loadBooksFromFile() {
         books.clear();
@@ -141,7 +153,7 @@ public class BookService {
             System.out.println("Book is currently borrowed by someone else.");
             return false;
         }
-        LocalDate dueDate = LocalDate.now().plusDays(STANDARD_LOAN_DAYS);
+        LocalDate dueDate = timeProvider.today().plusDays(STANDARD_LOAN_DAYS);
         book.setAvailableCopies(Math.max(0, book.getAvailableCopies() - 1));
         book.setDueDate(dueDate);
         saveAllBooksToFile();
@@ -154,7 +166,7 @@ public class BookService {
         BorrowRecord active = borrowRecordService.findActiveBorrowRecord(username, book.getIsbn());
         if (active == null) return false;
         LocalDate originalDue = active.getDueDate();
-        LocalDate returnDate = LocalDate.now();
+        LocalDate returnDate = timeProvider.today();
         book.setAvailableCopies(book.getAvailableCopies() + 1);
         if (book.getAvailableCopies() >= book.getTotalCopies()) {
             book.setDueDate(null);
@@ -162,8 +174,8 @@ public class BookService {
         saveAllBooksToFile();
         borrowRecordService.recordReturn(username, book.getIsbn(), returnDate);
         if (originalDue != null && returnDate.isAfter(originalDue)) {
-            int fine = (int) ChronoUnit.DAYS.between(originalDue, returnDate) * 10;
-            fineService.addFine(username, fine);
+            int overdueDays = (int) ChronoUnit.DAYS.between(originalDue, returnDate);
+            fineService.addFine(username, fineCalculator.calculate(FineCalculator.MEDIA_BOOK, overdueDays));
         }
         return true;
     }
@@ -171,19 +183,20 @@ public class BookService {
     public int calculateFine(Book book) {
         BorrowRecord overdueRecord = null;
         for (BorrowRecord record : borrowRecordService.getRecords()) {
-            if (!record.isReturned() && record.getIsbn().equals(book.getIsbn()) && record.getDueDate() != null && LocalDate.now().isAfter(record.getDueDate())) {
+            if (!record.isReturned() && record.getIsbn().equals(book.getIsbn()) && record.getDueDate() != null && timeProvider.today().isAfter(record.getDueDate())) {
                 overdueRecord = record;
                 break;
             }
         }
         if (overdueRecord == null) return 0;
-        return (int) ChronoUnit.DAYS.between(overdueRecord.getDueDate(), LocalDate.now()) * 10;
+        int overdueDays = (int) ChronoUnit.DAYS.between(overdueRecord.getDueDate(), timeProvider.today());
+        return fineCalculator.calculate(FineCalculator.MEDIA_BOOK, overdueDays);
     }
 
     public List<Book> getOverdueBooks() {
         List<Book> overdue = new ArrayList<>();
         for (BorrowRecord record : borrowRecordService.getRecords()) {
-            if (!record.isReturned() && record.getDueDate() != null && LocalDate.now().isAfter(record.getDueDate())) {
+            if (!record.isReturned() && record.getDueDate() != null && timeProvider.today().isAfter(record.getDueDate())) {
                 Book book = findBookByIsbn(record.getIsbn());
                 if (book != null && !overdue.contains(book)) {
                     overdue.add(book);
