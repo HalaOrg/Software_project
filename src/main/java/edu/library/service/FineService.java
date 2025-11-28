@@ -50,6 +50,13 @@ public class FineService {
         return new HashMap<>(balances);
     }
 
+    /**
+     * Persist current balances to disk.
+     */
+    public void saveBalances() {
+        save();
+    }
+
     private void load() {
         balances.clear();
         try {

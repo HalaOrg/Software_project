@@ -13,6 +13,7 @@ import java.util.List;
 public class AuthService {
     private final String filePath;
     private final List<Roles> users = new ArrayList<>();
+    private final FineService fineService;
     private Roles currentUser;
 
     public AuthService() {
@@ -20,7 +21,16 @@ public class AuthService {
     }
 
     public AuthService(String filePath) {
+        this(filePath, null);
+    }
+
+    public AuthService(FineService fineService) {
+        this(resolveDefault("users.txt"), fineService);
+    }
+
+    public AuthService(String filePath, FineService fineService) {
         this.filePath = filePath;
+        this.fineService = fineService;
         loadUsersFromFile();
     }
 
@@ -29,6 +39,7 @@ public class AuthService {
         for (Roles user : users) {
             if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
                 currentUser = user;
+                persistOutstandingFines(user);
                 return user;
             }
         }
