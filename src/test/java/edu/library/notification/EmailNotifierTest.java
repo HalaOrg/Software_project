@@ -19,6 +19,18 @@ class EmailNotifierTest {
     }
 
     @Test
+    void notify_sendsEmailWhenOverdueCountIsZero() {
+        EmailServer server = mock(EmailServer.class);
+        EmailNotifier notifier = new EmailNotifier(server);
+        Roles user = new Roles("carol", "pw", "MEMBER", "carol@example.com");
+
+        notifier.notify(user, "You have 0 overdue book(s).");
+
+        verify(server, times(1)).sendEmail("carol@example.com", "You have 0 overdue book(s).");
+        verifyNoMoreInteractions(server);
+    }
+
+    @Test
     void notify_doesNothingWhenUserIsNull() {
         EmailServer server = mock(EmailServer.class);
         EmailNotifier notifier = new EmailNotifier(server);

@@ -9,6 +9,9 @@ import edu.library.service.Admin;
 import edu.library.service.FineService;
 import edu.library.service.Member;
 import edu.library.service.Librarian;
+import edu.library.service.ReminderService;
+import edu.library.notification.EmailNotifier;
+import edu.library.notification.SmtpEmailServer;
 import java.util.Scanner;
 
 public class Main {
@@ -20,6 +23,8 @@ public class Main {
                 fineService);
         service.loadBooksFromFile();
         AuthService auth = new AuthService(fineService);
+        ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
+        reminderService.addObserver(new EmailNotifier(new SmtpEmailServer()));
         Scanner input = new Scanner(System.in);
 
         while (true) {
@@ -83,6 +88,7 @@ public class Main {
                 }
 
                 System.out.println("✅ Logged in as: " + user.getUsername() + " (" + user.getRoleName() + ")");
+                reminderService.sendReminderForUser(user);
 
                 boolean sessionActive = true;
                 while (sessionActive) {

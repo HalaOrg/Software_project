@@ -43,20 +43,43 @@ public class ReminderService {
     public void sendReminders() {
         Map<String, Long> overdueCounts = calculateOverdueCounts();
         for (Roles user : authService.getUsers()) {
-            long count = overdueCounts.getOrDefault(user.getUsername(), 0L);
-            if (count > 0) {
-                String message = String.format("You have %d overdue book(s).", count);
-                for (Observer observer : observers) {
-                    observer.notify(user, message);
-                }
-            }
+            sendIfOverdue(user, overdueCounts.getOrDefault(user.getUsername(), 0L));
         }
+    }
+
+    /**
+     * Send a reminder for a single user (e.g., immediately after they log in).
+     *
+     * @param user target member
+     */
+    public void sendReminderForUser(Roles user) {
+        if (user == null) return;
+        long overdueCount = countOverdueRecordsForUser(user.getUsername());
+        sendIfOverdue(user, overdueCount);
     }
 
     private Map<String, Long> calculateOverdueCounts() {
         return borrowRecordService.getRecords().stream()
                 .filter(record -> getOverdueDays(record) > 0)
                 .collect(Collectors.groupingBy(BorrowRecord::getUsername, Collectors.counting()));
+    }
+
+    private long countOverdueRecordsForUser(String username) {
+        if (username == null) return 0;
+        return borrowRecordService.getRecords().stream()
+                .filter(record -> username.equals(record.getUsername()))
+                .filter(record -> getOverdueDays(record) > 0)
+                .count();
+    }
+
+    private void sendIfOverdue(Roles user, long overdueCount) {
+        if (user == null || overdueCount <= 0) {
+            return;
+        }
+        String message = String.format("You have %d overdue book(s).", overdueCount);
+        for (Observer observer : observers) {
+            observer.notify(user, message);
+        }
     }
 
     /**

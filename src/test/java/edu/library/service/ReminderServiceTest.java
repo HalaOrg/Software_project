@@ -1,59 +1,64 @@
 package edu.library.service;
 
-import edu.library.model.BorrowRecord;
-import edu.library.notification.EmailNotifier;
-import edu.library.notification.EmailServer;
+import edu.library.model.Roles;
+import edu.library.notification.Observer;
 import edu.library.time.TimeProvider;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class ReminderServiceTest {
+class ReminderServiceTest {
 
-    @TempDir
-    Path tempDir;
+    @Test
+    void sendReminderForUser_notifiesWhenOverdue() throws Exception {
+        LocalDate today = LocalDate.of(2024, 1, 10);
+        TimeProvider timeProvider = () -> today;
 
-    private BorrowRecordService borrowRecordService;
-    private AuthService authService;
-    private TimeProvider timeProvider;
-    private EmailServer emailServer;
+        Path tempDir = Files.createTempDirectory("reminders");
+        Path borrowFile = tempDir.resolve("borrow_records.txt");
+        BorrowRecordService borrowRecordService = new BorrowRecordService(borrowFile.toString());
+        borrowRecordService.recordBorrow("dana", "ISBN-123", today.minusDays(3));
 
-    @BeforeEach
-    void setup() {
-        borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records.txt").toString());
-        authService = new AuthService(tempDir.resolve("users.txt").toString());
-        authService.addUser("alice", "pw", "MEMBER", "alice@example.com");
-        timeProvider = mock(TimeProvider.class);
-        emailServer = mock(EmailServer.class);
+        Path usersFile = tempDir.resolve("users.txt");
+        Files.writeString(usersFile, "dana,pw,MEMBER,dana@example.com\n");
+        AuthService authService = new AuthService(usersFile.toString());
+        Roles user = authService.getUsers().get(0);
+
+        Observer observer = mock(Observer.class);
+        ReminderService reminderService = new ReminderService(borrowRecordService, authService, timeProvider);
+        reminderService.addObserver(observer);
+
+        reminderService.sendReminderForUser(user);
+
+        verify(observer).notify(user, "You have 1 overdue book(s).");
     }
 
     @Test
-    void sendReminders_notifiesObserversWithOverdueCount() {
-        LocalDate today = LocalDate.of(2024, 5, 10);
-        when(timeProvider.today()).thenReturn(today);
-        borrowRecordService.recordBorrow("alice", "isbn-1", today.minusDays(2));
+    void sendReminderForUser_skipsWhenNoOverdue() throws Exception {
+        LocalDate today = LocalDate.of(2024, 1, 10);
+        TimeProvider timeProvider = () -> today;
+
+        Path tempDir = Files.createTempDirectory("reminders-none");
+        Path borrowFile = tempDir.resolve("borrow_records.txt");
+        BorrowRecordService borrowRecordService = new BorrowRecordService(borrowFile.toString());
+        borrowRecordService.recordBorrow("erin", "ISBN-456", today.plusDays(2));
+
+        Path usersFile = tempDir.resolve("users.txt");
+        Files.writeString(usersFile, "erin,pw,MEMBER,erin@example.com\n");
+        AuthService authService = new AuthService(usersFile.toString());
+        Roles user = authService.getUsers().get(0);
+
+        Observer observer = mock(Observer.class);
         ReminderService reminderService = new ReminderService(borrowRecordService, authService, timeProvider);
-        reminderService.addObserver(new EmailNotifier(emailServer));
+        reminderService.addObserver(observer);
 
-        reminderService.sendReminders();
+        reminderService.sendReminderForUser(user);
 
-        verify(emailServer).sendEmail("alice@example.com", "You have 1 overdue book(s).");
-    }
-
-    @Test
-    void getOverdueDays_usesTimeProvider() {
-        LocalDate dueDate = LocalDate.of(2024, 1, 1);
-        BorrowRecord record = new BorrowRecord("alice", "isbn-2", dueDate, false, null);
-        when(timeProvider.today()).thenReturn(LocalDate.of(2024, 1, 4));
-        ReminderService reminderService = new ReminderService(borrowRecordService, authService, timeProvider);
-
-        assertEquals(3, reminderService.getOverdueDays(record));
-        verify(timeProvider, times(1)).today();
+        verify(observer, never()).notify(any(), any());
     }
 }

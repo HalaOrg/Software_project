@@ -110,6 +110,13 @@ public class AuthService {
         return new ArrayList<>(users);
     }
 
+    private void persistOutstandingFines(Roles user) {
+        if (fineService == null || user == null) {
+            return;
+        }
+        fineService.storeBalanceOnLogin(user.getUsername());
+    }
+
     private void loadUsersFromFile() {
         users.clear();
         File file = new File(filePath);

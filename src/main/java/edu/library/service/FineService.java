@@ -51,6 +51,19 @@ public class FineService {
     }
 
     /**
+     * Persist an existing user's balance immediately when they log in.
+     *
+     * @param username member username
+     */
+    public void storeBalanceOnLogin(String username) {
+        if (username == null) return;
+        int balance = getBalance(username);
+        if (balance <= 0) return;
+        balances.put(username, balance);
+        save();
+    }
+
+    /**
      * Persist current balances to disk.
      */
     public void saveBalances() {
