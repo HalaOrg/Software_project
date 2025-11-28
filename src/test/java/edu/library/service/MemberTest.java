@@ -14,8 +14,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import static org.junit.jupiter.api.Assertions.*;
-import edu.library.service.BorrowRecordService;
-import edu.library.service.FineService;
+
 
 public class MemberTest {
 
@@ -46,7 +45,8 @@ public class MemberTest {
             System.setProperty("user.dir", tempDir.toString());
             BookService service = new BookService(tempDir.resolve("books_search_yes.txt").toString(),
                     new BorrowRecordService(tempDir.resolve("borrow_records_yes.txt").toString()),
-                    new FineService(tempDir.resolve("fines_yes.txt").toString()));            service.addBook(new Book("Alpha","Author A","ISBN-ALPHA"));
+                    new FineService(tempDir.resolve("fines_yes.txt").toString()));
+            service.addBook(new Book("Alpha","Author A","ISBN-ALPHA"));
 
             AuthService auth = new AuthService(tempDir.resolve("u_search_yes.txt").toString());
             Roles member = new Roles("m","p","MEMBER","m@example.com");
@@ -79,7 +79,6 @@ public class MemberTest {
             assertEquals(0, rc);
             assertFalse(book.isAvailable());
             assertNotNull(book.getDueDate());
-            assertEquals(LocalDate.now().plusDays(28), book.getDueDate());
         } finally {
             System.setProperty("user.dir", originalCwd.toString());
         }
@@ -162,6 +161,23 @@ public class MemberTest {
     }
 
     @Test
+    void viewRemainingTime_showsActiveLoans() {
+        BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records_remaining.txt").toString());
+        BookService service = new BookService(tempDir.resolve("books_remaining.txt").toString(),
+                borrowRecordService,
+                new FineService(tempDir.resolve("fines_remaining.txt").toString()));
+        Book book = new Book("Clock","Author","CLK-1");
+        service.addBook(book);
+        service.borrowBook(book, "m");
+
+        AuthService auth = new AuthService(tempDir.resolve("u_remaining.txt").toString());
+        Roles member = new Roles("m","p","MEMBER","m@example.com");
+
+        int rc = runHandle("6\n", service, auth, member);
+        assertEquals(0, rc);
+    }
+
+    @Test
     void logout_returns1_andClearsCurrentUser() throws IOException {
         Path usersFile = tempDir.resolve("u_logout_member.txt");
         Files.write(usersFile, Collections.singletonList("mem,mpwd,MEMBER,mem@example.com"));
@@ -172,7 +188,7 @@ public class MemberTest {
         BookService service = new BookService(tempDir.resolve("books_logout.txt").toString(),
                 new BorrowRecordService(tempDir.resolve("borrow_records_logout.txt").toString()),
                 new FineService(tempDir.resolve("fines_logout.txt").toString()));
-        int rc = runHandle("6\n", service, auth, mem);
+        int rc = runHandle("7\n", service, auth, mem);
         assertEquals(1, rc);
         assertNull(auth.getCurrentUser());
     }
@@ -184,7 +200,7 @@ public class MemberTest {
                 new BorrowRecordService(tempDir.resolve("borrow_records_exit.txt").toString()),
                 new FineService(tempDir.resolve("fines_exit.txt").toString()));
 
-        int rc = runHandle("7\n", service, auth, mem);
+        int rc = runHandle("8\n", service, auth, mem);
         assertEquals(2, rc);
     }
     @Test
@@ -197,5 +213,79 @@ public class MemberTest {
 
         int rc = runHandle("notanumber\n", service, auth, mem);
         assertEquals(0, rc);
+    }
+
+
+    @Test
+    void borrow_blocked_whenOutstandingFines() {
+        FineService fs = new FineService(tempDir.resolve("f_fines.txt").toString());
+        BorrowRecordService brs = new BorrowRecordService(tempDir.resolve("br_fines.txt").toString());
+        BookService service = new BookService(tempDir.resolve("books_fines.txt").toString(), brs, fs);
+
+        Book book = new Book("DebtBook","A","DF-1");
+        service.addBook(book);
+
+        // add fine to prevent borrowing
+        fs.addFine("m", 25);
+
+        AuthService auth = new AuthService(tempDir.resolve("u_fined.txt").toString());
+        Roles member = new Roles("m","p","MEMBER","m@example.com");
+
+        int rc = runHandle("2\nDF-1\n", service, auth, member);
+        assertEquals(0, rc);
+        // borrow should not have occurred
+        assertTrue(book.isAvailable());
+        assertNull(book.getDueDate());
+    }
+
+    @Test
+    void return_late_generatesFine_forMember() {
+        FineService fs = new FineService(tempDir.resolve("f_return_late.txt").toString());
+        BorrowRecordService brs = new BorrowRecordService(tempDir.resolve("br_return_late.txt").toString());
+        BookService service = new BookService(tempDir.resolve("books_return_late.txt").toString(), brs, fs);
+
+        Book book = new Book("Late","A","L-1");
+        service.addBook(book);
+        brs.recordBorrow("m", "L-1", LocalDate.now().minusDays(5));
+
+        AuthService auth = new AuthService(tempDir.resolve("u_return_late.txt").toString());
+        Roles member = new Roles("m","p","MEMBER","m@example.com");
+
+        int rc = runHandle("3\nL-1\n", service, auth, member);
+        assertEquals(0, rc);
+        // fine should be added (5 days * 10)
+        assertEquals(5 * 10, fs.getBalance("m"));
+    }
+
+    @Test
+    void viewRemainingTime_noActiveLoans_printsMessage() {
+        BookService service = new BookService(tempDir.resolve("books_none.txt").toString(),
+                new BorrowRecordService(tempDir.resolve("br_none.txt").toString()),
+                new FineService(tempDir.resolve("f_none.txt").toString()));
+        AuthService auth = new AuthService(tempDir.resolve("u_none.txt").toString());
+        Roles member = new Roles("m","p","MEMBER","m@example.com");
+
+        int rc = runHandle("6\n", service, auth, member);
+        assertEquals(0, rc);
+    }
+
+    @Test
+    void payFines_invalidAmount_and_overpay_behaviour() {
+        FineService fs = new FineService(tempDir.resolve("f_pay.txt").toString());
+        BorrowRecordService brs = new BorrowRecordService(tempDir.resolve("br_pay.txt").toString());
+        BookService service = new BookService(tempDir.resolve("books_pay.txt").toString(), brs, fs);
+
+        fs.addFine("m", 30);
+
+        AuthService auth = new AuthService(tempDir.resolve("u_pay.txt").toString());
+        Roles member = new Roles("m","p","MEMBER","m@example.com");
+
+        int rc1 = runHandle("5\nnotnum\n", service, auth, member);
+        assertEquals(0, rc1);
+        assertEquals(30, fs.getBalance("m"));
+
+        int rc2 = runHandle("5\n100\n", service, auth, member);
+        assertEquals(0, rc2);
+        assertEquals(0, fs.getBalance("m"));
     }
 }

@@ -5,9 +5,12 @@ import edu.library.model.Roles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
@@ -25,12 +28,12 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionAddBook_addsBookToService() {
+    void optionAddBook() {
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_add.txt").toString());
         Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
 
-        String input = "1\nMy Book\nSome Author\nISBN-1\n";
+        String input = "1\nMy Book\nSome Author\nISBN-1\n3\n";
         int rc = runHandle(input, service, auth, lib);
         assertEquals(0, rc);
 
@@ -43,7 +46,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionSearch_noResults_returns0() {
+    void optionSearch_noResults() {
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_search1.txt").toString());
         Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
@@ -54,7 +57,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionSearch_withResults_returns0() {
+    void optionSearch_withResults() {
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
         // add a book directly to the service
         service.addBook(new Book("FoundTitle","Auth","ISBN-FOUND"));
@@ -71,7 +74,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionLogout_returns1_and_clearsCurrentUser() throws IOException {
+    void optionLogout_clearsCurrentUser() throws IOException {
         Path usersFile = tempDir.resolve("u_logout.txt");
         Files.write(usersFile, Collections.singletonList("libr,lpwd,LIBRARIAN,libr@example.com"));
         AuthService auth = new AuthService(usersFile.toString());
@@ -79,7 +82,7 @@ public class LibrerianTest {
         assertNotNull(r);
 
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-        String input = "4\n";
+        String input = "8\n";
         int rc = runHandle(input, service, auth, r);
         assertEquals(1, rc);
         assertNull(auth.getCurrentUser());
@@ -91,8 +94,24 @@ public class LibrerianTest {
         Roles r = new Roles("x","p","LIBRARIAN","x@example.com");
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
 
-        int rc = runHandle("5\n", service, auth, r);
+        int rc = runHandle("9\n", service, auth, r);
         assertEquals(2, rc);
+    }
+
+    @Test
+    void updateQuantity() {
+        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
+        AuthService auth = new AuthService(tempDir.resolve("u_update.txt").toString());
+        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
+        service.addBook(new Book("Keep","Auth","UP-1",2));
+
+        int rcUpdate = runHandle("6\nUP-1\n5\n", service, auth, lib);
+        assertEquals(0, rcUpdate);
+        assertEquals(5, service.searchBook("UP-1").get(0).getTotalCopies());
+
+        int rcDelete = runHandle("7\nUP-1\n", service, auth, lib);
+        assertEquals(0, rcDelete);
+        assertTrue(service.searchBook("UP-1").isEmpty());
     }
 
     @Test
@@ -103,5 +122,59 @@ public class LibrerianTest {
 
         int rc = runHandle("notanumber\n", service, auth, r);
         assertEquals(0, rc);
+    }
+    @Test
+    void viewBorrowRecords_showsOverdueFlag() {
+        BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString());
+        FineService fineService = new FineService(tempDir.resolve("fines_lib.txt").toString());
+        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), borrowRecordService, fineService);
+
+        borrowRecordService.recordBorrow("member1", "ISBN-OVERDUE", LocalDate.now().minusDays(29));
+
+        AuthService auth = new AuthService(tempDir.resolve("u_overdue.txt").toString());
+        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        System.setOut(new PrintStream(out));
+
+        try {
+            int rc = runHandle("4\n", service, auth, lib);
+            assertEquals(0, rc);
+        } finally {
+            System.setOut(originalOut);
+        }
+
+        String output = out.toString();
+        assertTrue(output.contains("Overdue"));
+        assertTrue(output.contains("ISBN-OVERDUE"));
+    }
+
+    @Test
+    void viewFineBalances_listsCurrentFines() {
+        BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString());
+        FineService fineService = new FineService(tempDir.resolve("fines_lib.txt").toString());
+        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), borrowRecordService, fineService);
+
+        fineService.addFine("member1", 40);
+        fineService.addFine("member2", 10);
+
+        AuthService auth = new AuthService(tempDir.resolve("u_fines.txt").toString());
+        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        System.setOut(new PrintStream(out));
+
+        try {
+            int rc = runHandle("5\n", service, auth, lib);
+            assertEquals(0, rc);
+        } finally {
+            System.setOut(originalOut);
+        }
+
+        String output = out.toString();
+        assertTrue(output.contains("member1: 40"));
+        assertTrue(output.contains("member2: 10"));
     }
 }

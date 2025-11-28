@@ -41,6 +41,9 @@ public class FineService {
         save();
         return updated;
     }
+    public Map<String, Integer> getAllBalances() {
+        return new HashMap<>(balances);
+    }
 
     private void load() {
         balances.clear();
