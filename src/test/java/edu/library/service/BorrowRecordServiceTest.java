@@ -29,7 +29,7 @@ public class BorrowRecordServiceTest {
     }
 
     @Test
-    void recordBorrow_addsActiveRecordAndPersists() throws IOException {
+    void recordBorrow_addsActiveR() throws IOException {
         LocalDate dueDate = LocalDate.now().plusDays(10);
         service.recordBorrow("user1", "ISBN-1", dueDate);
 
@@ -48,7 +48,7 @@ public class BorrowRecordServiceTest {
     }
 
     @Test
-    void findActiveBorrowRecord_andRecordReturn_updatesStateAndSaves() {
+    void findActiveBorrowRecord() {
         LocalDate dueDate = LocalDate.now().plusDays(5);
         service.recordBorrow("user1", "ISBN-2", dueDate);
 
@@ -71,7 +71,7 @@ public class BorrowRecordServiceTest {
     }
 
     @Test
-    void recordReturn_withoutExistingBorrow_createsReturnedRecord() {
+    void recordReturn_withoutExistingB() {
         LocalDate returnDate = LocalDate.now();
         service.recordReturn("user2", "ISBN-3", returnDate);
 
@@ -85,7 +85,7 @@ public class BorrowRecordServiceTest {
     }
 
     @Test
-    void getActiveBorrowRecordsForUser_filtersReturnedOnes() {
+    void getActiveBorrowRecordsForUser() {
         LocalDate now = LocalDate.now();
         service.recordBorrow("user3", "ISBN-A", now.plusDays(7));
         service.recordBorrow("user3", "ISBN-B", now.plusDays(1));
@@ -97,11 +97,10 @@ public class BorrowRecordServiceTest {
     }
 
     @Test
-    void constructor_createsFileIfMissing() {
+    void constructor_FileIfMissing() {
         assertTrue(Files.exists(recordsFile));
     }
 
-    // --- New tests to increase branch coverage ---
 
     @Test
     void loadRecords_throwsOnMalformedDate() throws IOException {
@@ -116,17 +115,15 @@ public class BorrowRecordServiceTest {
         List<BorrowRecord> returned = service.getRecords();
         assertEquals(1, returned.size());
         returned.clear();
-        // underlying service list should remain unchanged
         assertEquals(1, service.getRecords().size());
     }
 
     @Test
-    void recordBorrow_persistsNullFields_asNullTokensInFile() throws IOException {
+    void recordBorrow_persistsNull() throws IOException {
         service.recordBorrow(null, null, null);
         List<String> lines = Files.readAllLines(recordsFile);
         assertEquals(1, lines.size());
         String line = lines.get(0);
-        // expect 'null' tokens in the comma-separated line
         assertTrue(line.startsWith("null,null,null"));
         assertTrue(line.contains("false"));
     }

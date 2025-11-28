@@ -111,14 +111,12 @@ class AuthServiceTest {
         ));
         AuthService auth = new AuthService(usersFile.toString());
 
-        // failed attempt
         assertNull(auth.login("eve", "wrong"));
         // successful attempt
         Roles eve = auth.login("eve", "evepwd");
         assertNotNull(eve);
         assertEquals("eve", auth.getCurrentUser().getUsername());
 
-        // login as another user should replace currentUser
         Roles frank = auth.login("frank", "frankpwd");
         assertNotNull(frank);
         assertEquals("frank", auth.getCurrentUser().getUsername());
@@ -151,7 +149,6 @@ class AuthServiceTest {
         AuthService reloaded = new AuthService(usersFile.toString());
         assertNull(reloaded.login("harry", "harrypwd"));
 
-        // removing non-existent user
         assertFalse(auth.removeUser("noone"));
     }
 
@@ -177,7 +174,6 @@ class AuthServiceTest {
         assertTrue(auth.logout());
         assertNull(auth.getCurrentUser());
 
-        // logging out when nobody is logged in
         assertFalse(auth.logout());
     }
 
@@ -237,9 +233,7 @@ class AuthServiceTest {
         auth.addUser("copyUser", "pwd", "MEMBER", "copy@example.com");
         java.util.List<Roles> list = auth.getUsers();
         assertFalse(list.isEmpty());
-        // modify returned list
         list.clear();
-        // underlying users in auth should remain
         assertTrue(auth.userExists("copyUser"));
     }
 
@@ -263,12 +257,9 @@ class AuthServiceTest {
     @Test
     void loadUsers_createsFile_whenNotExists() {
         Path usersFile = tempDir.resolve("missing_users.txt");
-        // do not create the file manually
         assertFalse(Files.exists(usersFile));
 
-        // instantiate the service to trigger file creation (no local variable needed)
         new AuthService(usersFile.toString());
-        // after construction the service should have created the file
         assertTrue(Files.exists(usersFile));
     }
 
@@ -278,7 +269,6 @@ class AuthServiceTest {
         Files.write(usersFile, Collections.singletonList("CaseUser,pass,MEMBER"));
         AuthService auth = new AuthService(usersFile.toString());
 
-        // login is case-sensitive for username
         assertNull(auth.login("caseuser", "pass"));
         assertNotNull(auth.login("CaseUser", "pass"));
     }
@@ -291,7 +281,6 @@ class AuthServiceTest {
         auth.addUser("dupe", "pwd1", "MEMBER", "dupe1@example.com");
         auth.addUser("dupe", "pwd2", "MEMBER", "dupe2@example.com");
 
-        // both passwords should authenticate because both entries were added
         assertNotNull(auth.login("dupe", "pwd1"));
         assertNotNull(auth.login("dupe", "pwd2"));
 
@@ -306,18 +295,15 @@ class AuthServiceTest {
         Files.write(usersFile, Collections.singletonList("admin,adminpwd,ADMIN,admin@example.com"));
         AuthService auth = new AuthService(usersFile.toString());
 
-        // before login there should be no current admin
         assertNull(auth.getCurrentAdmin());
 
         Roles admin = auth.login("admin", "adminpwd");
         assertNotNull(admin);
-        // getCurrentAdmin should return the logged-in user
         Roles current = auth.getCurrentAdmin();
         assertNotNull(current);
         assertTrue(current.isAdmin());
         assertEquals("admin", current.getUsername());
 
-        // logging out clears the current admin
         assertTrue(auth.logout());
         assertNull(auth.getCurrentAdmin());
     }
@@ -330,11 +316,9 @@ class AuthServiceTest {
 
         Roles r = auth.login("u1", "pwd1");
         assertNotNull(r);
-        // getCurrentAdmin currently returns the same currentUser instance
         assertSame(auth.getCurrentUser(), auth.getCurrentAdmin());
     }
 
-    // --- New tests to cover previously-uncovered branches ---
 
     @Test
     void removeUser_null_returnsFalse() {
@@ -352,7 +336,6 @@ class AuthServiceTest {
         ));
 
         AuthService auth = new AuthService(usersFile.toString());
-        // 'shortline' should be ignored, 'good' should be loaded
         assertFalse(auth.userExists("shortline"));
         assertTrue(auth.userExists("good"));
     }

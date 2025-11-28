@@ -38,7 +38,6 @@ public class BookServiceTest {
 
     @AfterEach
     void cleanup() {
-        // restore working dir
         System.setProperty("user.dir", originalCwd.toString());
         try {
             java.nio.file.Files.deleteIfExists(tempDir.resolve("books.txt"));
@@ -51,7 +50,6 @@ public class BookServiceTest {
         Book book = new Book("Clean Code", "Robert Martin", "999", 3);
         int before = service.getBooks().size();
         service.addBook(book);
-        // list size should increase by one and contain the new title
         assertEquals(before + 1, service.getBooks().size());
         assertTrue(service.getBooks().stream().anyMatch(b -> "Clean Code".equals(b.getTitle())));
     }
@@ -59,12 +57,10 @@ public class BookServiceTest {
     @Test
     void testSearchBook() {
         List<Book> foundByAuthor = service.searchBook("Tolkien");
-        // ensure both books authored by Tolkien are present
         assertTrue(foundByAuthor.stream().anyMatch(b -> "The Hobbit".equals(b.getTitle())));
         assertTrue(foundByAuthor.stream().anyMatch(b -> "LOTR".equals(b.getTitle())));
 
         List<Book> foundByTitle = service.searchBook("The Hobbit");
-        // assert that at least one result has the expected title (tolerant to extra entries)
         assertTrue(foundByTitle.stream().anyMatch(b -> "The Hobbit".equals(b.getTitle())));
     }
 
@@ -128,7 +124,6 @@ public class BookServiceTest {
         assertFalse(service.searchBook(book2.getIsbn()).stream().findFirst().isPresent());
     }
 
-    // --- New tests to increase branch coverage ---
 
     @Test
     void updateBookQuantity_negativeNewQuantity_returnsFalse() {
@@ -149,7 +144,6 @@ public class BookServiceTest {
     void searchBook_isbnCaseInsensitive_matches() {
         List<Book> found = service.searchBook("12345");
         assertTrue(found.stream().anyMatch(b -> b.getIsbn().equalsIgnoreCase("12345")));
-        // different case
         found = service.searchBook("54321");
         assertTrue(found.stream().anyMatch(b -> b.getIsbn().equalsIgnoreCase("54321")));
     }
@@ -162,9 +156,7 @@ public class BookServiceTest {
 
     @Test
     void borrowBook_withOutstandingFines_returnsFalse() {
-        // create a FineService instance that is shared with the BookService so we can add fines to it
         FineService fs = new FineService(tempDir.resolve("fines.txt").toString());
-        // create a fresh BookService that uses this FineService
         service = new BookService(tempDir.resolve("books.txt").toString(), borrowRecordService, fs);
         Book local1 = new Book("Local1", "Author", "L-ISBN-1", 1);
         service.addBook(local1);

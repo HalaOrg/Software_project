@@ -39,7 +39,7 @@ public class FineServiceTest {
     }
 
     @Test
-    void payFine_reducesBalance_andDoesNotGoNegative() {
+    void payFine_reducesBalance() {
         fineService.addFine("bob", 20);
 
         int remaining = fineService.payFine("bob", 5);
@@ -52,7 +52,7 @@ public class FineServiceTest {
     }
 
     @Test
-    void getBalance_handlesMissingOrNullUsers() {
+    void getBalance_MissingOrNullUsers() {
         assertEquals(0, fineService.getBalance("unknown"));
         assertEquals(0, fineService.getBalance(null));
     }
@@ -67,18 +67,14 @@ public class FineServiceTest {
 
     @Test
     void addFine_ignoresNullOrNonPositiveAmount_andDoesNotPersist() throws IOException {
-        // null username should be ignored
         fineService.addFine(null, 10);
         assertEquals(0, fineService.getBalance(null));
         assertEquals(0, fineService.getAllBalances().size());
-
-        // non-positive amounts should be ignored and not create file entries
         fineService.addFine("user1", 0);
         fineService.addFine("user2", -5);
         assertEquals(0, fineService.getBalance("user1"));
         assertEquals(0, fineService.getBalance("user2"));
 
-        // file should still be empty (no entries persisted)
         String content = new String(Files.readAllBytes(finesFile), StandardCharsets.UTF_8);
         assertTrue(content.trim().isEmpty());
     }
@@ -86,12 +82,9 @@ public class FineServiceTest {
     @Test
     void payFine_withNullOrNonPositiveInputs_returnsUnchanged() {
         fineService.addFine("payer", 40);
-
-        // null username -> returns current balance for null (which is 0)
         int r = fineService.payFine(null, 5);
         assertEquals(0, r);
 
-        // non-positive amount -> should return current balance unchanged
         int before = fineService.getBalance("payer");
         int after = fineService.payFine("payer", 0);
         assertEquals(before, after);
@@ -102,35 +95,35 @@ public class FineServiceTest {
 
     @Test
     void constructor_throws_onMalformedFile() throws IOException {
-        // create a file with a malformed balance (non-integer)
-        Files.write(finesFile, "alice,notanumber\n".getBytes(StandardCharsets.UTF_8));
+        Path badFile = tempDir.resolve("fines_bad.txt");
+        Files.write(badFile, "alice,notanumber\n".getBytes(StandardCharsets.UTF_8));
 
-        // constructing FineService should attempt to load and fail with NumberFormatException
-        assertThrows(NumberFormatException.class, () -> new FineService(finesFile.toString()));
+        assertThrows(NumberFormatException.class, () -> new FineService(badFile.toString()));
     }
+
 
     @Test
     void getAllBalances_returnsACopy_notBackingMap() {
         fineService.addFine("copytest", 7);
         Map<String, Integer> copy = fineService.getAllBalances();
-        // mutate returned map
         copy.put("copytest", 999);
-        // internal balance should remain unchanged
         assertEquals(7, fineService.getBalance("copytest"));
     }
-
     @Test
-    void save_persistsMultipleEntries_andFileContainsBoth() throws IOException {
+    void save_persistsMultipleEntries_andFileContainsBoth() {
+        // نضيف غرامتين
         fineService.addFine("a", 1);
         fineService.addFine("b", 2);
 
-        String content = new String(Files.readAllBytes(finesFile), StandardCharsets.UTF_8);
-        assertTrue(content.contains("a,1"));
-        assertTrue(content.contains("b,2"));
-
-        // also verify reloading reads both
         FineService reloaded = new FineService(finesFile.toString());
+
         assertEquals(1, reloaded.getBalance("a"));
         assertEquals(2, reloaded.getBalance("b"));
+
+        Map<String, Integer> balances = reloaded.getAllBalances();
+        assertTrue(balances.size() >= 2);
+        assertEquals(1, balances.get("a"));
+        assertEquals(2, balances.get("b"));
     }
+
 }

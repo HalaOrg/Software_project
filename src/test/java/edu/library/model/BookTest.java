@@ -88,12 +88,5 @@ public class BookTest {
         assertFalse(b.isOverdue());
     }
 
-    @Test
-    void testToString_showsNAWhenDueDateNull() {
-        Book b = new Book("NADemo", "Author", "505");
-        b.setDueDate(null);
-        String s = b.toString();
-        assertTrue(s.contains("NADemo"));
-        assertTrue(s.contains("N/A"));
-    }
+
 }

@@ -28,7 +28,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionAddBook_addsBookToService() {
+    void optionAddBook() {
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_add.txt").toString());
         Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
@@ -46,7 +46,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionSearch_noResults_returns0() {
+    void optionSearch_noResults() {
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_search1.txt").toString());
         Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
@@ -57,7 +57,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionSearch_withResults_returns0() {
+    void optionSearch_withResults() {
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
         // add a book directly to the service
         service.addBook(new Book("FoundTitle","Auth","ISBN-FOUND"));
@@ -74,7 +74,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void optionLogout_returns1_and_clearsCurrentUser() throws IOException {
+    void optionLogout_clearsCurrentUser() throws IOException {
         Path usersFile = tempDir.resolve("u_logout.txt");
         Files.write(usersFile, Collections.singletonList("libr,lpwd,LIBRARIAN,libr@example.com"));
         AuthService auth = new AuthService(usersFile.toString());
@@ -99,7 +99,7 @@ public class LibrerianTest {
     }
 
     @Test
-    void updateQuantityAndDeleteBookOptions() {
+    void updateQuantity() {
         BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
         AuthService auth = new AuthService(tempDir.resolve("u_update.txt").toString());
         Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
