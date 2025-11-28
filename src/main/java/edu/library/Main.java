@@ -4,7 +4,9 @@ import edu.library.model.Book;
 import edu.library.service.BookService;
 import edu.library.model.Roles;
 import edu.library.service.AuthService;
+import edu.library.service.BorrowRecordService;
 import edu.library.service.Admin;
+import edu.library.service.FineService;
 import edu.library.service.Member;
 import edu.library.service.Librarian;
 import java.util.Scanner;
@@ -12,9 +14,13 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        BookService service = new BookService();
+        FineService fineService = new FineService();
+        BorrowRecordService borrowRecordService = new BorrowRecordService();
+        BookService service = new BookService(new java.io.File(System.getProperty("user.dir"), "books.txt").getPath(),
+                borrowRecordService,
+                fineService);
         service.loadBooksFromFile();
-        AuthService auth = new AuthService();
+        AuthService auth = new AuthService(fineService);
         Scanner input = new Scanner(System.in);
 
         while (true) {

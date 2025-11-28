@@ -13,14 +13,24 @@ import java.util.List;
 public class AuthService {
     private final String filePath;
     private final List<Roles> users = new ArrayList<>();
+    private final FineService fineService;
     private Roles currentUser;
 
     public AuthService() {
-        this("users.txt");
+        this(resolveDefault("users.txt"), null);
     }
 
     public AuthService(String filePath) {
+        this(filePath, null);
+    }
+
+    public AuthService(FineService fineService) {
+        this(resolveDefault("users.txt"), fineService);
+    }
+
+    public AuthService(String filePath, FineService fineService) {
         this.filePath = filePath;
+        this.fineService = fineService;
         loadUsersFromFile();
     }
 
@@ -29,6 +39,7 @@ public class AuthService {
         for (Roles user : users) {
             if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
                 currentUser = user;
+                persistOutstandingFines(user);
                 return user;
             }
         }
@@ -143,6 +154,19 @@ public class AuthService {
             }
         } catch (IOException e) {
             System.out.println("Error saving users: " + e.getMessage());
+        }
+    }
+
+    private static String resolveDefault(String filename) {
+        String base = System.getProperty("user.dir", "");
+        return new File(base, filename).getPath();
+    }
+
+    private void persistOutstandingFines(Roles user) {
+        if (fineService == null || user == null) return;
+        int balance = fineService.getBalance(user.getUsername());
+        if (balance > 0) {
+            fineService.saveBalances();
         }
     }
 }

@@ -2,22 +2,27 @@ package edu.library.service;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 
 public class FineService {
-    private final String filePath;
+    private final Path filePath;
     private final Map<String, Integer> balances = new HashMap<>();
 
     public FineService() {
-        this("fines.txt");
+        this(resolveDefault("fines.txt"));
     }
 
     public FineService(String filePath) {
+        this(Path.of(filePath));
+    }
+
+    public FineService(Path filePath) {
         this.filePath = filePath;
         load();
     }
@@ -45,19 +50,27 @@ public class FineService {
         return new HashMap<>(balances);
     }
 
+    /**
+     * Persist current balances to disk.
+     */
+    public void saveBalances() {
+        save();
+    }
+
     private void load() {
         balances.clear();
-        File file = new File(filePath);
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                System.out.println("Error creating fines file: " + e.getMessage());
+        try {
+            if (filePath.getParent() != null) {
+                Files.createDirectories(filePath.getParent());
             }
-            return;
+            if (!Files.exists(filePath)) {
+                Files.createFile(filePath);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Error ensuring fines file exists", e);
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader reader = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
@@ -69,17 +82,26 @@ public class FineService {
                 }
             }
         } catch (IOException e) {
-            System.out.println("Error reading fines file: " + e.getMessage());
+            throw new RuntimeException("Error reading fines file", e);
         }
     }
 
     private void save() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+        try (BufferedWriter writer = Files.newBufferedWriter(
+                filePath,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.TRUNCATE_EXISTING,
+                StandardOpenOption.CREATE)) {
             for (Map.Entry<String, Integer> entry : balances.entrySet()) {
                 writer.write(String.format("%s,%d%n", entry.getKey(), entry.getValue()));
             }
         } catch (IOException e) {
-            System.out.println("Error saving fines: " + e.getMessage());
+            throw new RuntimeException("Error saving fines", e);
         }
+    }
+
+    private static String resolveDefault(String filename) {
+        String base = System.getProperty("user.dir", "");
+        return Path.of(base).resolve(filename).toString();
     }
 }
