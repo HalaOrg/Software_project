@@ -11,7 +11,6 @@ import edu.library.service.Member;
 import edu.library.service.Librarian;
 import java.util.Scanner;
 
-
 public class Main {
     public static void main(String[] args) {
         FineService fineService = new FineService();
@@ -54,10 +53,8 @@ public class Main {
                 String username = input.nextLine().trim();
                 System.out.print("Enter password: ");
                 String password = input.nextLine().trim();
-                // Registration always creates a MEMBER by default
                 String role = "MEMBER";
 
-                // check if username exists
                 boolean exists = false;
                 for (Roles r : auth.getUsers()) {
                     if (r.getUsername().equalsIgnoreCase(username)) {
@@ -87,7 +84,6 @@ public class Main {
 
                 System.out.println("✅ Logged in as: " + user.getUsername() + " (" + user.getRoleName() + ")");
 
-                // role-based menu loop
                 boolean sessionActive = true;
                 while (sessionActive) {
                     int result;
@@ -98,7 +94,6 @@ public class Main {
                     } else if (user.isLibrarian()) {
                         result = Librarian.handle(input, service, auth, user);
                     } else {
-                        // unknown role: fallback to member behavior
                         result = Member.handle(input, service, auth, user);
                     }
 
