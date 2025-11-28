@@ -16,7 +16,7 @@ public class AuthService {
     private Roles currentUser;
 
     public AuthService() {
-        this("users.txt");
+        this(resolveDefault("users.txt"));
     }
 
     public AuthService(String filePath) {
@@ -144,5 +144,10 @@ public class AuthService {
         } catch (IOException e) {
             System.out.println("Error saving users: " + e.getMessage());
         }
+    }
+
+    private static String resolveDefault(String filename) {
+        String base = System.getProperty("user.dir", "");
+        return new File(base, filename).getPath();
     }
 }

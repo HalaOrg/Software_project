@@ -22,7 +22,7 @@ public class BookService {
     private List<Book> books = new ArrayList<>();
 
     public BookService() {
-        this("books.txt", new BorrowRecordService(), new FineService(), new SystemTimeProvider(), new FineCalculator());
+        this(resolveDefault("books.txt"), new BorrowRecordService(), new FineService(), new SystemTimeProvider(), new FineCalculator());
     }
 
     public BookService(String bookFilePath, BorrowRecordService borrowRecordService, FineService fineService) {
@@ -235,5 +235,10 @@ public class BookService {
             if (isbn.equalsIgnoreCase(b.getIsbn())) return b;
         }
         return null;
+    }
+
+    private static String resolveDefault(String filename) {
+        String base = System.getProperty("user.dir", "");
+        return new File(base, filename).getPath();
     }
 }
