@@ -21,16 +21,16 @@ public class AuthService {
     }
 
     public AuthService(String filePath) {
-        this(filePath, null);
+        this(filePath, new FineService());
     }
 
     public AuthService(FineService fineService) {
-        this(resolveDefault("users.txt"), fineService);
+        this(resolveDefault("users.txt"), fineService == null ? new FineService() : fineService);
     }
 
     public AuthService(String filePath, FineService fineService) {
         this.filePath = filePath;
-        this.fineService = fineService;
+        this.fineService = fineService == null ? new FineService() : fineService;
         loadUsersFromFile();
     }
 
@@ -115,6 +115,8 @@ public class AuthService {
             return;
         }
         fineService.storeBalanceOnLogin(user.getUsername());
+        // Ensure all known balances are flushed so the fines.txt file always exists after login
+        fineService.saveBalances();
     }
 
     private void loadUsersFromFile() {
