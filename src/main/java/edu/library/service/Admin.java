@@ -102,7 +102,19 @@ public class Admin {
                     System.out.println("You cannot remove yourself.");
                     return 0;
                 }
-                if (auth.removeUser(rem)) System.out.println("✅Removed user: " + rem); else System.out.println("User not found: " + rem);
+                if (!user.isAdmin()) {
+                    System.out.println("Only administrators can unregister users.");
+                    return 0;
+                }
+                if (service.hasActiveBorrowRecords(rem)) {
+                    System.out.println("Cannot unregister user with active loans. Ask them to return borrowed items first.");
+                    return 0;
+                }
+                if (service.getOutstandingFine(rem) > 0) {
+                    System.out.println("Cannot unregister user with unpaid fines. All fines must be settled.");
+                    return 0;
+                }
+                if (auth.removeUserWithRestrictions(rem, service.getBorrowRecordService())) System.out.println("✅Removed user: " + rem); else System.out.println("User not found or cannot be removed: " + rem);
                 return 0;
             case 7:
                 System.out.println("Users in system:");
