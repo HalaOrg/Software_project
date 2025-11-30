@@ -22,7 +22,7 @@ public class BookService {
     private List<Book> books = new ArrayList<>();
 
     public BookService() {
-        this("books.txt", new BorrowRecordService(), new FineService(), new SystemTimeProvider(), new FineCalculator());
+        this(resolveDefault("books.txt"), new BorrowRecordService(), new FineService(), new SystemTimeProvider(), new FineCalculator());
     }
 
     public BookService(String bookFilePath, BorrowRecordService borrowRecordService, FineService fineService) {
@@ -236,4 +236,36 @@ public class BookService {
         }
         return null;
     }
+
+    private static String resolveDefault(String filename) {
+        String base = System.getProperty("user.dir", "");
+        return new File(base, filename).getPath();
+    }
+    public void updateFinesOnStartup() {
+
+        for (BorrowRecord record : borrowRecordService.getRecords()) {
+
+            if (!record.isReturned()
+                    && record.getDueDate() != null
+                    && timeProvider.today().isAfter(record.getDueDate())) {
+
+                int overdueDays = (int) ChronoUnit.DAYS.between(
+                        record.getDueDate(),
+                        timeProvider.today()
+                );
+
+                int newFineAmount = fineCalculator.calculate(FineCalculator.MEDIA_BOOK, overdueDays);
+
+                String username = record.getUsername();
+
+                int currentBalance = fineService.getBalance(username);
+
+                if (newFineAmount > currentBalance) {
+                    int diff = newFineAmount - currentBalance;
+                    fineService.addFine(username, diff);
+                }
+            }
+        }
+    }
+
 }

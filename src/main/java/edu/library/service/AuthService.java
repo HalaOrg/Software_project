@@ -13,14 +13,24 @@ import java.util.List;
 public class AuthService {
     private final String filePath;
     private final List<Roles> users = new ArrayList<>();
+    private final FineService fineService;
     private Roles currentUser;
 
     public AuthService() {
-        this("users.txt");
+        this(resolveDefault("users.txt"));
     }
 
     public AuthService(String filePath) {
+        this(filePath, new FineService());
+    }
+
+    public AuthService(FineService fineService) {
+        this(resolveDefault("users.txt"), fineService == null ? new FineService() : fineService);
+    }
+
+    public AuthService(String filePath, FineService fineService) {
         this.filePath = filePath;
+        this.fineService = fineService == null ? new FineService() : fineService;
         loadUsersFromFile();
     }
 
@@ -29,6 +39,7 @@ public class AuthService {
         for (Roles user : users) {
             if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
                 currentUser = user;
+                persistOutstandingFines(user);
                 return user;
             }
         }
@@ -99,6 +110,15 @@ public class AuthService {
         return new ArrayList<>(users);
     }
 
+    private void persistOutstandingFines(Roles user) {
+        if (fineService == null || user == null) {
+            return;
+        }
+        fineService.storeBalanceOnLogin(user.getUsername());
+        // Ensure all known balances are flushed so the fines.txt file always exists after login
+        fineService.saveBalances();
+    }
+
     private void loadUsersFromFile() {
         users.clear();
         File file = new File(filePath);
@@ -144,5 +164,10 @@ public class AuthService {
         } catch (IOException e) {
             System.out.println("Error saving users: " + e.getMessage());
         }
+    }
+
+    private static String resolveDefault(String filename) {
+        String base = System.getProperty("user.dir", "");
+        return new File(base, filename).getPath();
     }
 }

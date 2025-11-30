@@ -1,5 +1,5 @@
 leen,R100,2025-12-25,true,2025-11-27
 leen,R100,2025-11-25,false,null
 leen,R300,2025-12-25,false,null
-haa11,100,2025-12-26,false,null
-leen,100,2025-12-26,false,null
+haa11,R300,2025-11-26,true,2025-11-28
+remah,R300,2025-11-28,true,2025-11-30

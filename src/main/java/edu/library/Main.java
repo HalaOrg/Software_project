@@ -1,19 +1,34 @@
-package edu.library;
 
+package edu.library;
 import edu.library.model.Book;
 import edu.library.service.BookService;
 import edu.library.model.Roles;
 import edu.library.service.AuthService;
+import edu.library.service.BorrowRecordService;
 import edu.library.service.Admin;
+import edu.library.service.FineService;
 import edu.library.service.Member;
 import edu.library.service.Librarian;
+import edu.library.service.ReminderService;
+import edu.library.notification.EmailNotifier;
+import edu.library.notification.SmtpEmailServer;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        BookService service = new BookService();
+        FineService fineService = new FineService();
+        BorrowRecordService borrowRecordService = new BorrowRecordService();
+
+        BookService service = new BookService(new java.io.File(System.getProperty("user.dir"), "books.txt").getPath(),
+                borrowRecordService,
+                fineService);
+
         service.loadBooksFromFile();
-        AuthService auth = new AuthService();
+        service.updateFinesOnStartup();
+
+        AuthService auth = new AuthService(fineService);;
+        ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
+        reminderService.addObserver(new EmailNotifier(new SmtpEmailServer()));
         Scanner input = new Scanner(System.in);
 
         while (true) {
@@ -77,13 +92,15 @@ public class Main {
                 }
 
                 System.out.println("✅ Logged in as: " + user.getUsername() + " (" + user.getRoleName() + ")");
+                reminderService.sendReminderForUser(user);
 
                 boolean sessionActive = true;
                 while (sessionActive) {
                     int result;
                     if (user.isAdmin()) {
-                        result = Admin.handle(input, service, auth, user);
-                    } else if (user.isMember()) {
+                        result = Admin.handle(input, service, auth, reminderService, user);
+                    }
+                    else if (user.isMember()) {
                         result = Member.handle(input, service, auth, user);
                     } else if (user.isLibrarian()) {
                         result = Librarian.handle(input, service, auth, user);

@@ -2,9 +2,7 @@ package edu.library.notification;
 
 import edu.library.model.Roles;
 
-/**
- * Observer implementation that delegates to an {@link EmailServer}.
- */
+
 public class EmailNotifier implements Observer {
     private final EmailServer emailServer;
 
@@ -17,6 +15,13 @@ public class EmailNotifier implements Observer {
         if (user == null || message == null) {
             return;
         }
+
+        System.out.println("=== Reminder Email ===");
+        System.out.println("To user   : " + user.getUsername());
+        System.out.println("Email     : " + user.getEmail());
+        System.out.println("Message   : " + message);
+        System.out.println("======================");
+
         emailServer.sendEmail(user.getEmail(), message);
     }
 }

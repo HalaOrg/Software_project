@@ -2,7 +2,10 @@ package edu.library.service;
 
 import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
+import edu.library.notification.EmailNotifier;
+import edu.library.notification.EmailServer;
 import edu.library.notification.Observer;
+import edu.library.notification.SmtpEmailServer;
 import edu.library.time.TimeProvider;
 
 import java.time.LocalDate;
@@ -12,9 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Service responsible for identifying overdue records and notifying observers.
- */
 public class ReminderService {
     private final BorrowRecordService borrowRecordService;
     private final AuthService authService;
@@ -37,35 +37,56 @@ public class ReminderService {
         observers.remove(observer);
     }
 
-    /**
-     * Send reminder messages to all users who currently have overdue borrow records.
-     */
     public void sendReminders() {
         Map<String, Long> overdueCounts = calculateOverdueCounts();
         for (Roles user : authService.getUsers()) {
-            long count = overdueCounts.getOrDefault(user.getUsername(), 0L);
-            if (count > 0) {
-                String message = String.format("You have %d overdue book(s).", count);
-                for (Observer observer : observers) {
-                    observer.notify(user, message);
-                }
-            }
+            sendIfOverdue(user, overdueCounts.getOrDefault(user.getUsername(), 0L));
         }
     }
 
+
+    public void sendReminderForUser(Roles user) {
+        if (user == null) return;
+        long overdueCount = countOverdueRecordsForUser(user.getUsername());
+        sendIfOverdue(user, overdueCount);
+    }
+
     private Map<String, Long> calculateOverdueCounts() {
-        LocalDate today = timeProvider.today();
         return borrowRecordService.getRecords().stream()
-                .filter(record -> !record.isReturned() && record.getDueDate() != null && today.isAfter(record.getDueDate()))
+                .filter(record -> getOverdueDays(record) > 0)
                 .collect(Collectors.groupingBy(BorrowRecord::getUsername, Collectors.counting()));
     }
 
-    /**
-     * Calculate the overdue days for a particular record using the configured time provider.
-     *
-     * @param record borrow record to evaluate
-     * @return overdue days (0 when not overdue)
-     */
+    private long countOverdueRecordsForUser(String username) {
+        if (username == null) return 0;
+        return borrowRecordService.getRecords().stream()
+                .filter(record -> username.equals(record.getUsername()))
+                .filter(record -> getOverdueDays(record) > 0)
+                .count();
+    }
+
+    private void sendIfOverdue(Roles user, long overdueCount) {
+        if (user == null || overdueCount <= 0) {
+            return;
+        }
+
+        String message = "You have " + overdueCount + " overdue book(s).";
+
+        if (observers.isEmpty()) {
+            Observer defaultNotifier = new EmailNotifier(createDefaultEmailServer());
+            observers.add(defaultNotifier);
+        }
+
+        for (Observer observer : observers) {
+            observer.notify(user, message);
+        }
+    }
+
+
+    private EmailServer createDefaultEmailServer() {
+        return new SmtpEmailServer();
+    }
+
     public long getOverdueDays(BorrowRecord record) {
         if (record == null || record.getDueDate() == null || record.isReturned()) {
             return 0;
