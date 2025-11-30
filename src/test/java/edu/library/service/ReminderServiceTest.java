@@ -1,9 +1,11 @@
 package edu.library.service;
-
+import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 import edu.library.notification.Observer;
 import edu.library.time.TimeProvider;
 import org.junit.jupiter.api.Test;
+import java.util.Arrays;
+import java.util.List;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,30 +15,39 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ReminderServiceTest {
-
     @Test
-    void sendReminderForUser_notifiesWhenOverdue() throws Exception {
+    void sendReminderForUser_notifiesWhenOverdue() {
         LocalDate today = LocalDate.of(2024, 1, 10);
         TimeProvider timeProvider = () -> today;
 
-        Path tempDir = Files.createTempDirectory("reminders");
-        Path borrowFile = tempDir.resolve("borrow_records.txt");
-        BorrowRecordService borrowRecordService = new BorrowRecordService(borrowFile.toString());
-        borrowRecordService.recordBorrow("dana", "ISBN-123", today.minusDays(3));
+        BorrowRecordService borrowRecordService = mock(BorrowRecordService.class);
 
-        Path usersFile = tempDir.resolve("users.txt");
-        Files.writeString(usersFile, "dana,pw,MEMBER,dana@example.com\n");
-        AuthService authService = new AuthService(usersFile.toString());
-        Roles user = authService.getUsers().get(0);
+        BorrowRecord overdueRecord = new BorrowRecord(
+                "dana",
+                "ISBN-123",
+                today.minusDays(3),
+                false,
+                null
+        );
+
+        when(borrowRecordService.getRecords())
+                .thenReturn(Arrays.asList(overdueRecord));
+
+        AuthService authService = mock(AuthService.class);
+
+        Roles user = new Roles("dana", "pw", "MEMBER", "dana@example.com");
 
         Observer observer = mock(Observer.class);
-        ReminderService reminderService = new ReminderService(borrowRecordService, authService, timeProvider);
+
+        ReminderService reminderService =
+                new ReminderService(borrowRecordService, authService, timeProvider);
         reminderService.addObserver(observer);
 
         reminderService.sendReminderForUser(user);
 
         verify(observer).notify(user, "You have 1 overdue book(s).");
     }
+
 
     @Test
     void sendReminderForUser_skipsWhenNoOverdue() throws Exception {

@@ -11,9 +11,7 @@ import jakarta.mail.internet.MimeMessage;
 import java.util.Objects;
 import java.util.Properties;
 
-/**
- * SMTP-backed implementation of {@link EmailServer} using Jakarta Mail.
- */
+
 public class SmtpEmailServer implements EmailServer {
     private final String host;
     private final int port;
@@ -75,9 +73,6 @@ public class SmtpEmailServer implements EmailServer {
         return !host.isBlank() && !username.isBlank() && !password.isBlank();
     }
 
-    /**
-     * Immutable SMTP configuration.
-     */
     public static class SmtpEmailSettings {
         private final String host;
         private final int port;
@@ -88,12 +83,12 @@ public class SmtpEmailServer implements EmailServer {
 
         public SmtpEmailSettings() {
             this(
-                    System.getProperty("smtp.host", System.getenv().getOrDefault("SMTP_HOST", "smtp.gmail.com")),
-                    Integer.parseInt(System.getProperty("smtp.port", System.getenv().getOrDefault("SMTP_PORT", "587"))),
-                    Boolean.parseBoolean(System.getProperty("smtp.starttls", System.getenv().getOrDefault("SMTP_STARTTLS", "true"))),
-                    System.getProperty("smtp.username", System.getenv("SMTP_USERNAME")),
-                    System.getProperty("smtp.password", System.getenv("SMTP_PASSWORD")),
-                    System.getProperty("smtp.from", System.getenv("SMTP_FROM"))
+                    "smtp.gmail.com",   // host
+                    587,                // port
+                    true,               // startTls
+                    "halaeid807@gmail.com",   // SMTP_USERNAME (إيميل المكتبة اللي رح يبعث منّه)
+                    "SMTP_PASSWORD",       // SMTP_PASSWORD (app password من جوجل)
+                    "halaeid807@gmail.com"    // from address
             );
         }
 

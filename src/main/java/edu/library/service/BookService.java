@@ -241,4 +241,31 @@ public class BookService {
         String base = System.getProperty("user.dir", "");
         return new File(base, filename).getPath();
     }
+    public void updateFinesOnStartup() {
+
+        for (BorrowRecord record : borrowRecordService.getRecords()) {
+
+            if (!record.isReturned()
+                    && record.getDueDate() != null
+                    && timeProvider.today().isAfter(record.getDueDate())) {
+
+                int overdueDays = (int) ChronoUnit.DAYS.between(
+                        record.getDueDate(),
+                        timeProvider.today()
+                );
+
+                int newFineAmount = fineCalculator.calculate(FineCalculator.MEDIA_BOOK, overdueDays);
+
+                String username = record.getUsername();
+
+                int currentBalance = fineService.getBalance(username);
+
+                if (newFineAmount > currentBalance) {
+                    int diff = newFineAmount - currentBalance;
+                    fineService.addFine(username, diff);
+                }
+            }
+        }
+    }
+
 }

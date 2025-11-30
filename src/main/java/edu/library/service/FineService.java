@@ -50,11 +50,6 @@ public class FineService {
         return new HashMap<>(balances);
     }
 
-    /**
-     * Persist an existing user's balance immediately when they log in.
-     *
-     * @param username member username
-     */
     public void storeBalanceOnLogin(String username) {
         if (username == null) return;
         int balance = getBalance(username);
@@ -63,9 +58,6 @@ public class FineService {
         save();
     }
 
-    /**
-     * Persist current balances to disk.
-     */
     public void saveBalances() {
         save();
     }

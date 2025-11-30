@@ -4,13 +4,14 @@ import edu.library.model.Book;
 import edu.library.model.Roles;
 import java.util.List;
 import java.util.Scanner;
-
+import edu.library.service.ReminderService;
 public class Admin {
-    /**
-     * Handle admin menu actions.
-     * return 0 = stay logged in, 1 = logout, 2 = exit app
-     */
-    public static int handle(Scanner input, BookService service, AuthService auth, Roles user) {
+
+    public static int handle(Scanner input,
+                             BookService service,
+                             AuthService auth,
+                             ReminderService reminderService,
+                             Roles user) {
         System.out.println("\n--- Admin Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
         System.out.println("1. Add Book");
         System.out.println("2. Search Book");
@@ -19,8 +20,9 @@ public class Admin {
         System.out.println("5. Add Librarian");
         System.out.println("6. Remove User");
         System.out.println("7. List Users");
-        System.out.println("8. Logout");
-        System.out.println("9. Exit");
+        System.out.println("8. Send overdue reminders");
+        System.out.println("9. Logout");
+        System.out.println("10. Exit");
         System.out.print("Choose option: ");
         String opt = input.nextLine();
         int optInt;
@@ -109,6 +111,11 @@ public class Admin {
                 }
                 return 0;
             case 8:
+                reminderService.sendReminders();
+                System.out.println("Reminders sent.");
+                return 0;
+
+            case 9:
                 if (auth.logout()) {
                     System.out.println("✅ Logged out successfully.");
                     return 1;
@@ -116,7 +123,7 @@ public class Admin {
                     System.out.println("⚠️ No user is currently logged in.");
                     return 0;
                 }
-            case 9:
+            case 10:
                 System.out.println("👋 Exiting...");
                 return 2;
             default:

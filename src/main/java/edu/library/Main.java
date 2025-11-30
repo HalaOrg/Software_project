@@ -1,6 +1,5 @@
 
 package edu.library;
-
 import edu.library.model.Book;
 import edu.library.service.BookService;
 import edu.library.model.Roles;
@@ -19,11 +18,15 @@ public class Main {
     public static void main(String[] args) {
         FineService fineService = new FineService();
         BorrowRecordService borrowRecordService = new BorrowRecordService();
+
         BookService service = new BookService(new java.io.File(System.getProperty("user.dir"), "books.txt").getPath(),
                 borrowRecordService,
                 fineService);
+
         service.loadBooksFromFile();
-        AuthService auth = new AuthService(fineService);
+        service.updateFinesOnStartup();
+
+        AuthService auth = new AuthService(fineService);;
         ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
         reminderService.addObserver(new EmailNotifier(new SmtpEmailServer()));
         Scanner input = new Scanner(System.in);
@@ -95,8 +98,9 @@ public class Main {
                 while (sessionActive) {
                     int result;
                     if (user.isAdmin()) {
-                        result = Admin.handle(input, service, auth, user);
-                    } else if (user.isMember()) {
+                        result = Admin.handle(input, service, auth, reminderService, user);
+                    }
+                    else if (user.isMember()) {
                         result = Member.handle(input, service, auth, user);
                     } else if (user.isLibrarian()) {
                         result = Librarian.handle(input, service, auth, user);
