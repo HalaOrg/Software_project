@@ -85,6 +85,26 @@ public class AuthService {
         return false;
     }
 
+    /**
+     * Remove a user only if the currently logged-in user is an admin and the
+     * target user has no outstanding fines or active borrow records.
+     */
+    public boolean removeUserWithRestrictions(String username, BorrowRecordService borrowRecordService) {
+        if (currentUser == null || !currentUser.isAdmin()) {
+            return false;
+        }
+        if (username == null || currentUser.getUsername().equalsIgnoreCase(username)) {
+            return false;
+        }
+        if (fineService.getBalance(username) > 0) {
+            return false;
+        }
+        if (borrowRecordService != null && !borrowRecordService.getActiveBorrowRecordsForUser(username).isEmpty()) {
+            return false;
+        }
+        return removeUser(username);
+    }
+
     public boolean userExists(String username) {
         if (username == null) return false;
         for (Roles r : users) if (r.getUsername().equalsIgnoreCase(username)) return true;

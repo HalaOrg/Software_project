@@ -145,6 +145,10 @@ public class BookService {
     }
     public boolean borrowBook(Book book, String username) {
         if (book == null || username == null) return false;
+        if (hasOverdueBorrowRecord(username)) {
+            System.out.println("Cannot borrow new books until overdue items are returned.");
+            return false;
+        }
         if (fineService.getBalance(username) > 0) {
             System.out.println("Outstanding fines must be paid before borrowing.");
             return false;
@@ -213,6 +217,24 @@ public class BookService {
 
     public List<BorrowRecord> getBorrowRecords() {
         return borrowRecordService.getRecords();
+    }
+
+    public boolean hasActiveBorrowRecords(String username) {
+        return !borrowRecordService.getActiveBorrowRecordsForUser(username).isEmpty();
+    }
+
+    public boolean hasOverdueBorrowRecord(String username) {
+        if (username == null) return false;
+        for (BorrowRecord record : borrowRecordService.getActiveBorrowRecordsForUser(username)) {
+            if (record.getDueDate() != null && timeProvider.today().isAfter(record.getDueDate())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public BorrowRecordService getBorrowRecordService() {
+        return borrowRecordService;
     }
 
     public List<BorrowRecord> getActiveBorrowRecordsForUser(String username) {
