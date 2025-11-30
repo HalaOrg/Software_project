@@ -2,7 +2,10 @@ package edu.library.service;
 
 import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
+import edu.library.notification.EmailNotifier;
+import edu.library.notification.EmailServer;
 import edu.library.notification.Observer;
+import edu.library.notification.SmtpEmailServer;
 import edu.library.time.TimeProvider;
 
 import java.time.LocalDate;
@@ -77,9 +80,17 @@ public class ReminderService {
             return;
         }
         String message = String.format("You have %d overdue book(s).", overdueCount);
+        if (observers.isEmpty()) {
+            Observer defaultNotifier = new EmailNotifier(createDefaultEmailServer());
+            observers.add(defaultNotifier);
+        }
         for (Observer observer : observers) {
             observer.notify(user, message);
         }
+    }
+
+    private EmailServer createDefaultEmailServer() {
+        return new SmtpEmailServer();
     }
 
     /**
