@@ -4,7 +4,7 @@ import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 import edu.library.notification.EmailNotifier;
 import edu.library.notification.EmailServer;
-import edu.library.notification.Observer;
+import edu.library.notification.Observer;        // ← المهم!
 import edu.library.notification.SmtpEmailServer;
 import edu.library.time.TimeProvider;
 
@@ -19,7 +19,8 @@ public class ReminderService {
     private final BorrowRecordService borrowRecordService;
     private final AuthService authService;
     private final TimeProvider timeProvider;
-    private final List<Observer> observers = new ArrayList<>();
+
+    private final List<Observer> observers = new ArrayList<>();   // ← يستخدم Observer الصحيح
 
     public ReminderService(BorrowRecordService borrowRecordService, AuthService authService, TimeProvider timeProvider) {
         this.borrowRecordService = borrowRecordService;
@@ -44,7 +45,6 @@ public class ReminderService {
         }
     }
 
-
     public void sendReminderForUser(Roles user) {
         if (user == null) return;
         long overdueCount = countOverdueRecordsForUser(user.getUsername());
@@ -59,6 +59,7 @@ public class ReminderService {
 
     private long countOverdueRecordsForUser(String username) {
         if (username == null) return 0;
+
         return borrowRecordService.getRecords().stream()
                 .filter(record -> username.equals(record.getUsername()))
                 .filter(record -> getOverdueDays(record) > 0)
@@ -73,8 +74,7 @@ public class ReminderService {
         String message = "You have " + overdueCount + " overdue book(s).";
 
         if (observers.isEmpty()) {
-            Observer defaultNotifier = new EmailNotifier(createDefaultEmailServer());
-            observers.add(defaultNotifier);
+            observers.add(new EmailNotifier(new SmtpEmailServer()));
         }
 
         for (Observer observer : observers) {
@@ -82,19 +82,16 @@ public class ReminderService {
         }
     }
 
-
-    private EmailServer createDefaultEmailServer() {
-        return new SmtpEmailServer();
-    }
-
     public long getOverdueDays(BorrowRecord record) {
         if (record == null || record.getDueDate() == null || record.isReturned()) {
             return 0;
         }
+
         LocalDate today = timeProvider.today();
         if (!today.isAfter(record.getDueDate())) {
             return 0;
         }
+
         return ChronoUnit.DAYS.between(record.getDueDate(), today);
     }
 }

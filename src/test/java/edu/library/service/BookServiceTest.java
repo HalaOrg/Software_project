@@ -9,7 +9,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 public class BookServiceTest {
-    private BookService service;
+    private MediaService service;
     private BorrowRecordService borrowRecordService;
     private Book book1;
     private Book book2;
@@ -25,7 +25,7 @@ public class BookServiceTest {
         System.setProperty("user.dir", tempDir.toString());
 
         borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records.txt").toString());
-        service = new BookService(tempDir.resolve("books.txt").toString(),
+        service = new MediaService(tempDir.resolve("media.txt").toString(),
                 borrowRecordService,
                 new FineService(tempDir.resolve("fines.txt").toString()));
         service.loadBooksFromFile();
@@ -40,7 +40,7 @@ public class BookServiceTest {
     void cleanup() {
         System.setProperty("user.dir", originalCwd.toString());
         try {
-            java.nio.file.Files.deleteIfExists(tempDir.resolve("books.txt"));
+            java.nio.file.Files.deleteIfExists(tempDir.resolve("media.txt"));
         } catch (Exception ignored) {
         }
     }
@@ -157,7 +157,7 @@ public class BookServiceTest {
     @Test
     void borrowBook_withOutstandingFines_returnsFalse() {
         FineService fs = new FineService(tempDir.resolve("fines.txt").toString());
-        service = new BookService(tempDir.resolve("books.txt").toString(), borrowRecordService, fs);
+        service = new MediaService(tempDir.resolve("media.txt").toString(), borrowRecordService, fs);
         Book local1 = new Book("Local1", "Author", "L-ISBN-1", 1);
         service.addBook(local1);
         fs.addFine("finedUser", 50);

@@ -1,23 +1,20 @@
 package edu.library.service;
 
 import edu.library.model.Roles;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AuthService {
+
     private final String filePath;
     private final List<Roles> users = new ArrayList<>();
     private final FineService fineService;
     private Roles currentUser;
 
     public AuthService() {
-        this(resolveDefault("users.txt"));
+        this(resolveDefault("users.txt"), new FineService());
     }
 
     public AuthService(String filePath) {
@@ -34,81 +31,99 @@ public class AuthService {
         loadUsersFromFile();
     }
 
+    // -----------------------------------------------------
+    //                     LOGIN
+    // -----------------------------------------------------
+
     public Roles login(String username, String password) {
         if (username == null || password == null) return null;
+
         for (Roles user : users) {
-            if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
+            if (user.getUsername().equals(username) &&
+                    user.getPassword().equals(password)) {
+
                 currentUser = user;
                 persistOutstandingFines(user);
                 return user;
             }
         }
-
         return null;
     }
 
-    public Roles addUser(String username, String password, String roleName) {
-        return addUser(username, password, roleName, null);
-    }
+    // -----------------------------------------------------
+    //                     ADD USER
+    // -----------------------------------------------------
 
-    // new overload that accepts email
     public Roles addUser(String username, String password, String roleName, String email) {
-        // require username/password/role and a non-blank email
-        if (username == null || password == null || roleName == null) return null;
-        if (email == null) return null;
+        if (username == null || password == null || roleName == null || email == null)
+            return null;
+
         if (email.trim().isEmpty()) return null;
+
         Roles newUser = new Roles(username, password, roleName, email.trim());
         users.add(newUser);
         saveUsersToFile();
         return newUser;
     }
 
-    // remove user by username
-    public boolean removeUser(String username) {
-        if (username == null) return false;
-        Roles toRemove = null;
-        for (Roles r : users) {
-            if (r.getUsername().equalsIgnoreCase(username)) {
-                toRemove = r;
-                break;
-            }
-        }
-        if (toRemove != null) {
-            users.remove(toRemove);
-            saveUsersToFile();
-            // if removed user was currently logged in, clear
-            if (currentUser != null && currentUser.getUsername().equalsIgnoreCase(username)) {
-                currentUser = null;
-            }
-            return true;
-        }
-        return false;
+    public Roles addUser(String username, String password, String roleName) {
+        return addUser(username, password, roleName, "");
     }
 
-    /**
-     * Remove a user only if the currently logged-in user is an admin and the
-     * target user has no outstanding fines or active borrow records.
-     */
+    // -----------------------------------------------------
+    //                 REMOVE USER (simple)
+    // -----------------------------------------------------
+
+    public boolean removeUser(String username) {
+        if (username == null) return false;
+
+        Roles toRemove = users.stream()
+                .filter(u -> u.getUsername().equalsIgnoreCase(username))
+                .findFirst()
+                .orElse(null);
+
+        if (toRemove == null) return false;
+
+        users.remove(toRemove);
+        saveUsersToFile();
+
+        if (currentUser != null && currentUser.getUsername().equalsIgnoreCase(username)) {
+            currentUser = null;
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------
+    //          REMOVE USER with restrictions (admin)
+    // -----------------------------------------------------
+
     public boolean removeUserWithRestrictions(String username, BorrowRecordService borrowRecordService) {
-        if (currentUser == null || !currentUser.isAdmin()) {
+
+        if (currentUser == null || !currentUser.isAdmin()) return false;
+
+        if (username == null || username.equalsIgnoreCase(currentUser.getUsername()))
             return false;
-        }
-        if (username == null || currentUser.getUsername().equalsIgnoreCase(username)) {
+
+        if (fineService.getBalance(username) > 0)
             return false;
-        }
-        if (fineService.getBalance(username) > 0) {
+
+        if (borrowRecordService != null &&
+                !borrowRecordService.getActiveBorrowRecordsForUser(username).isEmpty())
             return false;
-        }
-        if (borrowRecordService != null && !borrowRecordService.getActiveBorrowRecordsForUser(username).isEmpty()) {
-            return false;
-        }
+
         return removeUser(username);
     }
 
+    // -----------------------------------------------------
+    //                     HELPERS
+    // -----------------------------------------------------
+
     public boolean userExists(String username) {
         if (username == null) return false;
-        for (Roles r : users) if (r.getUsername().equalsIgnoreCase(username)) return true;
-        return false;
+
+        return users.stream()
+                .anyMatch(u -> u.getUsername().equalsIgnoreCase(username));
     }
 
     public boolean logout() {
@@ -117,12 +132,11 @@ public class AuthService {
         return true;
     }
 
-
-    public Roles getCurrentAdmin() {
+    public Roles getCurrentUser() {
         return currentUser;
     }
 
-    public Roles getCurrentUser() {
+    public Roles getCurrentAdmin() {
         return currentUser;
     }
 
@@ -130,56 +144,54 @@ public class AuthService {
         return new ArrayList<>(users);
     }
 
+    // -----------------------------------------------------
+    //                  FILE HANDLING
+    // -----------------------------------------------------
+
     private void persistOutstandingFines(Roles user) {
-        if (fineService == null || user == null) {
-            return;
-        }
+        if (fineService == null) return;
         fineService.storeBalanceOnLogin(user.getUsername());
-        // Ensure all known balances are flushed so the fines.txt file always exists after login
         fineService.saveBalances();
     }
 
     private void loadUsersFromFile() {
         users.clear();
         File file = new File(filePath);
+
         if (!file.exists()) {
-            try {
-                boolean created = file.createNewFile();
-                if (!created) {
-                    System.out.println("Warning: could not create users file: " + filePath);
-                }
-            } catch (IOException e) {
-                System.out.println("Error creating users file: " + e.getMessage());
-            }
+            try { file.createNewFile(); }
+            catch (IOException e) { System.out.println("Error creating users file: " + e.getMessage()); }
             return;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader r = new BufferedReader(new FileReader(filePath))) {
             String line;
-            while ((line = reader.readLine()) != null) {
+
+            while ((line = r.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
-                String[] parts = line.split(",");
-                if (parts.length >= 3) {
-                    String username = parts[0].trim();
-                    String password = parts[1].trim();
-                    String roleName = parts[2].trim();
-                    String email = "";
-                    if (parts.length >= 4) {
-                        email = parts[3].trim();
-                    }
-                    users.add(new Roles(username, password, roleName, email));
-                }
+
+                String[] p = line.split(",");
+                String username = p.length > 0 ? p[0].trim() : "";
+                String password = p.length > 1 ? p[1].trim() : "";
+                String roleName = p.length > 2 ? p[2].trim() : "";
+                String email = p.length > 3 ? p[3].trim() : "";
+
+                users.add(new Roles(username, password, roleName, email));
             }
+
         } catch (IOException e) {
-            System.out.println("Error reading users file: " + e.getMessage());
+            System.out.println("Error reading users: " + e.getMessage());
         }
     }
 
     private void saveUsersToFile() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-            for (Roles user : users) {
-                // write username,password,role,email (email may be empty)
-                writer.write(String.format("%s,%s,%s,%s%n", user.getUsername(), user.getPassword(), user.getRoleName(), user.getEmail() == null ? "" : user.getEmail()));
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(filePath))) {
+            for (Roles u : users) {
+                w.write(String.format("%s,%s,%s,%s%n",
+                        u.getUsername(),
+                        u.getPassword(),
+                        u.getRoleName(),
+                        u.getEmail() == null ? "" : u.getEmail()));
             }
         } catch (IOException e) {
             System.out.println("Error saving users: " + e.getMessage());
@@ -187,7 +199,6 @@ public class AuthService {
     }
 
     private static String resolveDefault(String filename) {
-        String base = System.getProperty("user.dir", "");
-        return new File(base, filename).getPath();
+        return new File(System.getProperty("user.dir", ""), filename).getPath();
     }
 }

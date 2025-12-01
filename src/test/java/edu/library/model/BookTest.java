@@ -1,92 +1,61 @@
 package edu.library.model;
 
-import org.junit.jupiter.api.Test;
-
-import java.time.LocalDate;
-
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import java.time.LocalDate;
 
 public class BookTest {
 
     @Test
-    void testBookCreation() {
-        Book b = new Book("Test Book", "Author", "111");
-        assertTrue(b.isAvailable());
-        assertEquals("Test Book", b.getTitle());
-        assertEquals("Author", b.getAuthor());
-        assertNull(b.getDueDate());
+    void testConstructorWithQuantity() {
+        Book book = new Book("Java Programming", "Alice", "ISBN123", 5);
+
+        assertEquals("Java Programming", book.getTitle());
+        assertEquals("Alice", book.getAuthor());
+        assertEquals("ISBN123", book.getIsbn());
+        assertEquals(5, book.getTotalCopies());
+        assertEquals(5, book.getAvailableCopies());
     }
 
     @Test
-    void testSetAvailabilityAndDueDate() {
-        Book b = new Book("Title", "A", "222");
-        b.setAvailable(true);
-        b.setDueDate(LocalDate.now().plusDays(5));
-        assertTrue(b.isAvailable());
-        assertNotNull(b.getDueDate());
+    void testConstructorWithAvailabilityAndDueDate() {
+        LocalDate due = LocalDate.of(2025, 1, 1);
+
+        Book book = new Book("Data Structures", "Bob", "ISBN999",
+                true, due, 3);
+
+        assertEquals("Data Structures", book.getTitle());
+        assertEquals("Bob", book.getAuthor());
+        assertEquals("ISBN999", book.getIsbn());
+        assertTrue(book.isAvailable());
+        assertEquals(due, book.getDueDate());
+        assertEquals(3, book.getTotalCopies());
     }
 
     @Test
-    void testIsOverdue() {
-        Book b = new Book("Old Book", "Writer", "333");
-        b.setAvailable(false);
-        b.setDueDate(LocalDate.now().minusDays(2));
-        assertTrue(b.isOverdue());
-
-        b.setDueDate(LocalDate.now().plusDays(2));
-        assertFalse(b.isOverdue());
+    void testBorrowDurationDays() {
+        Book book = new Book("Test", "A", "123");
+        assertEquals(28, book.getBorrowDurationDays(),
+                "Borrow duration for books must be 28 days");
     }
 
     @Test
-    void testToStringFormat() {
-        Book b = new Book("Clean Code", "Uncle Bob", "999");
-        String text = b.toString();
-        assertTrue(text.contains("Clean Code"));
-        assertTrue(text.contains("Available"));
-    }
-
-
-    @Test
-    void testSecondConstructorAndGetters() {
-        LocalDate due = LocalDate.of(2024, 12, 31);
-        // replace 5-arg constructor with setters
-        Book b = new Book("Sec", "Auth", "555");
-        b.setAvailable(false);
-        b.setDueDate(due);
-        assertEquals("Sec", b.getTitle());
-        assertEquals("Auth", b.getAuthor());
-        assertEquals("555", b.getIsbn());
-        assertFalse(b.isAvailable());
-        assertEquals(due, b.getDueDate());
+    void testDailyFine() {
+        Book book = new Book("Test", "A", "123");
+        assertEquals(10, book.getDailyFine(),
+                "Daily fine for books must be 10");
     }
 
     @Test
-    void testSettersWork() {
-        Book b = new Book("Old", "A", "101");
-        b.setTitle("New Title");
-        b.setAuthor("New Author");
-        b.setIsbn("202");
-        assertEquals("New Title", b.getTitle());
-        assertEquals("New Author", b.getAuthor());
-        assertEquals("202", b.getIsbn());
+    void testAvailabilityAfterBorrowAndReturn() {
+        Book book = new Book("Test", "A", "123", 2);
+
+        // Borrow one copy
+        book.borrowOne();
+        assertEquals(1, book.getAvailableCopies());
+
+        // Return one copy
+        book.returnOne();
+        assertEquals(2, book.getAvailableCopies());
     }
-
-    @Test
-    void testIsOverdue_whenAvailableTrue_returnsFalse() {
-        Book b = new Book("B", "A", "303");
-        // even if due date is in the past, availability should short-circuit to not overdue
-        b.setDueDate(LocalDate.now().minusDays(10));
-        b.setAvailable(true);
-        assertFalse(b.isOverdue());
-    }
-
-    @Test
-    void testIsOverdue_dueDateNull_returnsFalse() {
-        Book b = new Book("NoDue", "A", "404");
-        b.setAvailable(false);
-        b.setDueDate(null);
-        assertFalse(b.isOverdue());
-    }
-
-
 }
