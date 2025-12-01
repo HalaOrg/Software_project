@@ -1,7 +1,8 @@
 
 package edu.library;
+import edu.library.fine.FineCalculator;
 import edu.library.model.Book;
-import edu.library.service.BookService;
+import edu.library.service.MediaService;
 import edu.library.model.Roles;
 import edu.library.service.AuthService;
 import edu.library.service.BorrowRecordService;
@@ -12,6 +13,8 @@ import edu.library.service.Librarian;
 import edu.library.service.ReminderService;
 import edu.library.notification.EmailNotifier;
 import edu.library.notification.SmtpEmailServer;
+import edu.library.time.SystemTimeProvider;
+
 import java.util.Scanner;
 
 public class Main {
@@ -19,12 +22,17 @@ public class Main {
         FineService fineService = new FineService();
         BorrowRecordService borrowRecordService = new BorrowRecordService();
 
-        BookService service = new BookService(new java.io.File(System.getProperty("user.dir"), "books.txt").getPath(),
+        MediaService service = new MediaService(
+                "media.txt",
                 borrowRecordService,
-                fineService);
+                fineService,
+                new SystemTimeProvider(),
+                new FineCalculator()
+        );
 
-        service.loadBooksFromFile();
-        service.updateFinesOnStartup();
+
+       // service.loadBooksFromFile();
+       // service.updateFinesOnStartup();
 
         AuthService auth = new AuthService(fineService);;
         ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
@@ -124,13 +132,14 @@ public class Main {
         }
     }
 
-    private static Book findBookByIsbn(BookService service, String isbn) {
+    private static Book findBookByIsbn(MediaService service, String isbn) {
         if (isbn == null) return null;
-        for (Book b : service.getBooks()) {
+        for (Book b : service.getBooks()) {   // <- الآن صالحة بعد إضافة getBooks()
             if (isbn.equalsIgnoreCase(b.getIsbn())) return b;
         }
         return null;
     }
+
 
 
 }

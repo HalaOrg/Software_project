@@ -1,53 +1,67 @@
 package edu.library.notification;
 
 import edu.library.model.Roles;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
-class EmailNotifierTest {
+public class EmailNotifierTest {
 
-    @Test
-    void notify_sendsEmailWhenUserAndMessageProvided() {
-        EmailServer server = mock(EmailServer.class);
-        EmailNotifier notifier = new EmailNotifier(server);
-        Roles user = new Roles("alice", "pw", "MEMBER", "alice@example.com");
+    private EmailServer emailServerMock;
+    private EmailNotifier emailNotifier;
 
-        notifier.notify(user, "You have 1 overdue book(s).");
-
-        verify(server).sendEmail("alice@example.com", "You have 1 overdue book(s).");
+    @BeforeEach
+    void setUp() {
+        emailServerMock = mock(EmailServer.class);  // عمل Mock لـ EmailServer
+        emailNotifier = new EmailNotifier(emailServerMock);
     }
 
     @Test
-    void notify_sendsEmailWhenOverdueCountIsZero() {
-        EmailServer server = mock(EmailServer.class);
-        EmailNotifier notifier = new EmailNotifier(server);
-        Roles user = new Roles("carol", "pw", "MEMBER", "carol@example.com");
+    void testNotify_SendsEmail_WhenValidData() {
+        // Arrange
+        Roles user = new Roles("john", "1234", "MEMBER", "john@example.com");
+        String message = "Your book is overdue";
 
-        notifier.notify(user, "You have 0 overdue book(s).");
+        // Act
+        emailNotifier.notify(user, message);
 
-        verify(server, times(1)).sendEmail("carol@example.com", "You have 0 overdue book(s).");
-        verifyNoMoreInteractions(server);
+        // Assert
+        verify(emailServerMock, times(1))
+                .sendEmail("john@example.com", message);
     }
 
     @Test
-    void notify_doesNothingWhenUserIsNull() {
-        EmailServer server = mock(EmailServer.class);
-        EmailNotifier notifier = new EmailNotifier(server);
+    void testNotify_DoesNotSendEmail_WhenUserIsNull() {
+        // Act
+        emailNotifier.notify(null, "Hello");
 
-        notifier.notify(null, "You have 0 overdue book(s).");
-
-        verify(server, never()).sendEmail(anyString(), anyString());
+        // Assert
+        verify(emailServerMock, never()).sendEmail(anyString(), anyString());
     }
 
     @Test
-    void notify_doesNothingWhenMessageIsNull() {
-        EmailServer server = mock(EmailServer.class);
-        EmailNotifier notifier = new EmailNotifier(server);
-        Roles user = new Roles("bob", "pw", "MEMBER", "bob@example.com");
+    void testNotify_DoesNotSendEmail_WhenMessageIsNull() {
+        // Arrange
+        Roles user = new Roles("john", "1234", "MEMBER", "john@example.com");
 
-        notifier.notify(user, null);
+        // Act
+        emailNotifier.notify(user, null);
 
-        verify(server, never()).sendEmail(anyString(), anyString());
+        // Assert
+        verify(emailServerMock, never()).sendEmail(anyString(), anyString());
+    }
+
+    @Test
+    void testNotify_UsesCorrectEmail() {
+        // Arrange
+        Roles user = new Roles("alex", "xx", "LIBRARIAN", "alex@gmail.com");
+        String msg = "Reminder";
+
+        // Act
+        emailNotifier.notify(user, msg);
+
+        // Assert
+        verify(emailServerMock).sendEmail("alex@gmail.com", "Reminder");
     }
 }

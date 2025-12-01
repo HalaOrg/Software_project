@@ -2,11 +2,6 @@ package edu.library.service;
 
 import edu.library.model.Book;
 import edu.library.model.Roles;
-import edu.library.service.AuthService;
-import edu.library.service.BookService;
-import edu.library.service.BorrowRecordService;
-import edu.library.service.FineService;
-import edu.library.service.ReminderService;
 import edu.library.time.SystemTimeProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -26,7 +21,7 @@ public class AdminTest {
 
     // helper to run Admin.handle with provided input string
     private int runHandle(String inputLines,
-                          BookService bookService,
+                          MediaService bookService,
                           AuthService authService,
                           ReminderService reminderService,
                           Roles user)
@@ -50,7 +45,7 @@ public class AdminTest {
         BorrowRecordService borrowService = new BorrowRecordService(
                 tempDir.resolve("borrow_records_admin.txt").toString()
         );
-        BookService bookService = new BookService(
+        MediaService bookService = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 new FineService(tempDir.resolve("fines_admin.txt").toString())
@@ -84,7 +79,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService bookService = new BookService(
+        MediaService bookService = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -110,7 +105,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService bookService = new BookService(
+        MediaService bookService = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -142,7 +137,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService bookService = new BookService(
+        MediaService bookService = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -162,7 +157,7 @@ public class AdminTest {
     }
     @Test
     void optionAddBook_addsBookToService_andFile() {
-        // BookService writes to books.txt in project root; change working dir to temp to avoid pollution
+        // BookService writes to media.txt in project root; change working dir to temp to avoid pollution
         Path originalCwd = Path.of(System.getProperty("user.dir"));
         try {
             System.setProperty("user.dir", tempDir.toString());
@@ -173,7 +168,7 @@ public class AdminTest {
             FineService fineService = new FineService(
                     tempDir.resolve("fines_admin.txt").toString()
             );
-            BookService service = new BookService(
+            MediaService service = new MediaService(
                     tempDir.resolve("books_admin.txt").toString(),
                     borrowService,
                     fineService
@@ -215,7 +210,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -251,7 +246,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -284,7 +279,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -317,7 +312,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -346,7 +341,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_admin.txt").toString(),
                 borrowService,
                 fineService
@@ -377,7 +372,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_admin2.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_admin2.txt").toString(),
                 borrowService,
                 fineService
@@ -406,7 +401,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_display.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_display.txt").toString(),
                 borrowService,
                 fineService
@@ -438,7 +433,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_inv.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_inv.txt").toString(),
                 borrowService,
                 fineService
@@ -468,7 +463,7 @@ public class AdminTest {
         FineService fineService = new FineService(
                 tempDir.resolve("fines_remove.txt").toString()
         );
-        BookService service = new BookService(
+        MediaService service = new MediaService(
                 tempDir.resolve("books_remove.txt").toString(),
                 borrowService,
                 fineService

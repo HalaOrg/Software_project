@@ -3,7 +3,7 @@ package edu.library;
 import edu.library.fine.FineCalculator;
 import edu.library.model.Book;
 import edu.library.service.AuthService;
-import edu.library.service.BookService;
+import edu.library.service.MediaService;
 import edu.library.service.BorrowRecordService;
 import edu.library.service.FineService;
 import edu.library.time.TimeProvider;
@@ -27,8 +27,8 @@ class BookServiceRestrictionsTest {
 
         BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records.txt").toString());
         FineService fineService = new FineService(tempDir.resolve("fines.txt").toString());
-        BookService bookService = new BookService(
-                tempDir.resolve("books.txt").toString(),
+        MediaService bookService = new MediaService(
+                tempDir.resolve("media.txt").toString(),
                 borrowRecordService,
                 fineService,
                 timeProvider,
@@ -53,8 +53,8 @@ class BookServiceRestrictionsTest {
 
         BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records.txt").toString());
         FineService fineService = new FineService(tempDir.resolve("fines.txt").toString());
-        BookService bookService = new BookService(
-                tempDir.resolve("books.txt").toString(),
+        MediaService bookService = new MediaService(
+                tempDir.resolve("media.txt").toString(),
                 borrowRecordService,
                 fineService,
                 timeProvider,
