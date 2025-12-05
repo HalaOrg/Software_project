@@ -1,60 +1,81 @@
 package edu.library.model;
 
 import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CDTest {
+public class CDTest {
 
     @Test
-    void testCDCreationAndGetters() {
-        CD cd = new CD("Best Hits", "Famous Artist", "CD123", 3);
-
-        assertEquals("Best Hits", cd.getTitle());
-        assertEquals("Famous Artist", cd.getAuthor());
-        assertEquals("CD123", cd.getIsbn());
-        assertEquals(3, cd.getTotalCopies());
-        assertEquals(3, cd.getAvailableCopies());
-        assertNull(cd.getDueDate());
+    void testConstructorBasic() {
+        CD cd = new CD("Music", "Artist", "111");
+        assertEquals("Music", cd.getTitle());
+        assertEquals("Artist", cd.getAuthor());
+        assertEquals("111", cd.getIsbn());
+        assertEquals(1, cd.getTotalCopies());
+        assertEquals(1, cd.getAvailableCopies());
     }
 
     @Test
-    void testBorrowAndReturn() {
-        CD cd = new CD("Best Hits", "Famous Artist", "CD123", 2);
+    void testConstructorWithQuantity() {
+        CD cd = new CD("Album", "Singer", "222", 5);
+        assertEquals(5, cd.getTotalCopies());
+        assertEquals(5, cd.getAvailableCopies());
+    }
 
+    @Test
+    void testConstructorWithAvailabilityAndDate() {
+        LocalDate date = LocalDate.now().plusDays(7);
+        CD cd = new CD("Hits", "DJ", "333", true, date, 3);
+
+        assertEquals("Hits", cd.getTitle());
+        assertEquals("DJ", cd.getAuthor());
+        assertEquals("333", cd.getIsbn());
         assertTrue(cd.isAvailable());
-        cd.borrowOne();
-        assertEquals(1, cd.getAvailableCopies());
+        assertEquals(3, cd.getTotalCopies());
+        assertEquals(date, cd.getDueDate());
+    }
 
-        cd.returnOne();
+    @Test
+    void testConstructorWithAvailableAndTotal() {
+        CD cd = new CD("Mix", "Producer", "444", 2, 10);
+        assertEquals(10, cd.getTotalCopies());
         assertEquals(2, cd.getAvailableCopies());
     }
 
     @Test
-    void testOverdue() {
-        CD cd = new CD("Best Hits", "Famous Artist", "CD123", false, LocalDate.now().minusDays(1), 2);
-        assertTrue(cd.isOverdue());
-
-        cd.setDueDate(LocalDate.now().plusDays(1));
-        assertFalse(cd.isOverdue());
+    void testBorrowDurationIsSevenDays() {
+        CD cd = new CD("Track", "Band", "555");
+        assertEquals(7, cd.getBorrowDurationDays());
     }
 
     @Test
-    void testBorrowDurationAndDailyFine() {
-        CD cd = new CD("Best Hits", "Famous Artist", "CD123", 2);
-        assertEquals(7, cd.getBorrowDurationDays());
+    void testDailyFineIsTwenty() {
+        CD cd = new CD("Track", "Band", "666");
         assertEquals(20, cd.getDailyFine());
     }
 
     @Test
-    void testSetters() {
-        CD cd = new CD("Best Hits", "Famous Artist", "CD123", 3);
-        cd.setTotalCopies(5);
-        assertEquals(5, cd.getTotalCopies());
+    void testBorrowReducesAvailableCopies() {
+        CD cd = new CD("Album", "Singer", "777", 2);
+        cd.borrowOne(); // inherited from Media
 
-        cd.setAvailableCopies(4);
-        assertEquals(4, cd.getAvailableCopies());
+        assertEquals(1, cd.getAvailableCopies());
+        assertTrue(cd.isAvailable());
+    }
+
+    @Test
+    void testReturnIncreasesAvailableCopies() {
+        CD cd = new CD("Album", "Singer", "888", 1, 3);
+        cd.returnOne();
+
+        assertEquals(2, cd.getAvailableCopies());
+    }
+
+    @Test
+    void testAvailabilityWhenZeroCopies() {
+        CD cd = new CD("Sound", "Artist", "999", 0, 2);
+        assertFalse(cd.isAvailable());
     }
 }

@@ -3,65 +3,78 @@ package edu.library.notification;
 import edu.library.model.Roles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class EmailNotifierTest {
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-    private EmailServer emailServerMock;
+class EmailNotifierTest {
+
+    private EmailServer mockEmailServer;
     private EmailNotifier emailNotifier;
+
+    private final PrintStream originalOut = System.out;
+    private ByteArrayOutputStream outContent;
 
     @BeforeEach
     void setUp() {
-        emailServerMock = mock(EmailServer.class);  // عمل Mock لـ EmailServer
-        emailNotifier = new EmailNotifier(emailServerMock);
+        mockEmailServer = mock(EmailServer.class);
+        emailNotifier = new EmailNotifier(mockEmailServer);
+
+        outContent = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outContent));
     }
 
     @Test
-    void testNotify_SendsEmail_WhenValidData() {
-        // Arrange
-        Roles user = new Roles("john", "1234", "MEMBER", "john@example.com");
-        String message = "Your book is overdue";
+    void testNotifyWithValidUserAndMessage() {
+        Roles user = new Roles("john_doe", "password", "MEMBER", "john@example.com");
+        String message = "Your book is overdue!";
 
-        // Act
         emailNotifier.notify(user, message);
 
-        // Assert
-        verify(emailServerMock, times(1))
-                .sendEmail("john@example.com", message);
+        // تحقق أن sendEmail تم استدعاؤه مرة واحدة مع البيانات الصحيحة
+        verify(mockEmailServer, times(1)).sendEmail("john@example.com", message);
+
+        // تحقق من طباعة الرسالة على الكونسول
+        String consoleOutput = outContent.toString();
+        assertTrue(consoleOutput.contains("=== Reminder Email ==="));
+        assertTrue(consoleOutput.contains("To user   : john_doe"));
+        assertTrue(consoleOutput.contains("Email     : john@example.com"));
+        assertTrue(consoleOutput.contains("Message   : Your book is overdue!"));
+        assertTrue(consoleOutput.contains("======================"));
     }
 
     @Test
-    void testNotify_DoesNotSendEmail_WhenUserIsNull() {
-        // Act
-        emailNotifier.notify(null, "Hello");
+    void testNotifyWithNullUser() {
+        String message = "Your book is overdue!";
+        emailNotifier.notify(null, message);
 
-        // Assert
-        verify(emailServerMock, never()).sendEmail(anyString(), anyString());
+        verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
+        assertEquals("", outContent.toString()); // لا يجب أن يطبع شيء
     }
 
     @Test
-    void testNotify_DoesNotSendEmail_WhenMessageIsNull() {
-        // Arrange
-        Roles user = new Roles("john", "1234", "MEMBER", "john@example.com");
-
-        // Act
+    void testNotifyWithNullMessage() {
+        Roles user = new Roles("john_doe", "password", "MEMBER", "john@example.com");
         emailNotifier.notify(user, null);
 
-        // Assert
-        verify(emailServerMock, never()).sendEmail(anyString(), anyString());
+        verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
+        assertEquals("", outContent.toString()); // لا يجب أن يطبع شيء
     }
 
     @Test
-    void testNotify_UsesCorrectEmail() {
-        // Arrange
-        Roles user = new Roles("alex", "xx", "LIBRARIAN", "alex@gmail.com");
-        String msg = "Reminder";
+    void testNotifyWithNullUserAndMessage() {
+        emailNotifier.notify(null, null);
 
-        // Act
-        emailNotifier.notify(user, msg);
+        verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
+        assertEquals("", outContent.toString()); // لا يجب أن يطبع شيء
+    }
 
-        // Assert
-        verify(emailServerMock).sendEmail("alex@gmail.com", "Reminder");
+    @BeforeEach
+    void tearDown() {
+        System.setOut(originalOut);
     }
 }

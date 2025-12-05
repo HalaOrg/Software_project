@@ -1,16 +1,19 @@
 package edu.library.service;
 
+import java.io.*;
+import java.util.*;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
 import edu.library.model.Book;
 import edu.library.model.CD;
 import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Scanner;
-
 public class Member {
+
+    // متغير عام لمسار ملف الغرامات ليصبح قابل للتغيير من التست
+    public static String fineFilePath = "fines.txt";
 
     /**
      * Handle member menu actions.
@@ -43,197 +46,17 @@ public class Member {
         }
 
         switch (optInt) {
-            // -----------------------------
-            // Books
-            // -----------------------------
-            case 1 -> { // Search Book
-                System.out.print("Enter title/author/ISBN to search: ");
-                String keyword = input.nextLine();
-                List<Book> foundBooks = service.searchBook(keyword);
-                if (foundBooks.isEmpty()) {
-                    System.out.println("No matching books found!");
-                } else {
-                    System.out.println("Found books:");
-                    for (Book b : foundBooks) System.out.println(b);
-                }
-                return 0;
-            }
-            case 2 -> { // Borrow Book
-                System.out.print("Enter ISBN to borrow: ");
-                String isbnBorrow = input.nextLine();
-                Book bookToBorrow = service.findBookByIsbn(isbnBorrow);
-                if (bookToBorrow == null) {
-                    System.out.println("Book not found.");
-                    return 0;
-                }
-                if (!bookToBorrow.isAvailable()) {
-                    System.out.println("Book is currently not available :(");
-                    return 0;
-                }
-
-                if (service.borrowBook(bookToBorrow, user.getUsername())) {
-                    System.out.println("Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
-                } else {
-                    System.out.println("Could not borrow book.");
-                }
-                return 0;
-            }
-            case 3 -> { // Return Book
-                System.out.print("Enter ISBN to return: ");
-                String isbnReturn = input.nextLine();
-                Book bookToReturn = service.findBookByIsbn(isbnReturn);
-                if (bookToReturn == null) {
-                    System.out.println("Book not found.");
-                    return 0;
-                }
-                boolean hasActiveLoan = service.getActiveBorrowRecordsForUser(user.getUsername()).stream()
-                        .anyMatch(r -> r.getIsbn().equalsIgnoreCase(isbnReturn));
-                if (!hasActiveLoan) {
-                    System.out.println("This book is not borrowed.");
-                    return 0;
-                }
-                if (service.returnBook(bookToReturn, user.getUsername())) {
-                    System.out.println("Book returned successfully.");
-                    int outstanding = service.getOutstandingFine(user.getUsername());
-                    if (outstanding > 0) {
-                        System.out.println("You have outstanding fines: " + outstanding + " NIS.");
-                    }
-                } else {
-                    System.out.println("Could not return book.");
-                }
-                return 0;
-            }
-            case 4 -> { // Display All Books
-                service.getBooks().forEach(System.out::println);
-                return 0;
-            }
-            case 5 -> { // Pay Fines
-                int outstanding = service.getOutstandingFine(user.getUsername());
-                if (outstanding == 0) {
-                    System.out.println("You have no outstanding fines.");
-                    return 0;
-                }
-                System.out.println("Your outstanding fines: " + outstanding + " NIS.");
-                System.out.print("Enter amount to pay: ");
-                String amtStr = input.nextLine();
-                int amt;
-                try {
-                    amt = Integer.parseInt(amtStr.trim());
-                } catch (Exception e) {
-                    System.out.println("Invalid amount.");
-                    return 0;
-                }
-                if (amt <= 0) {
-                    System.out.println("Amount must be positive.");
-                    return 0;
-                }
-                if (amt > outstanding) amt = outstanding;
-                service.payFine(user.getUsername(), amt);
-                System.out.println("Paid " + amt + " NIS. Remaining fines: " + service.getOutstandingFine(user.getUsername()) + " NIS.");
-                return 0;
-            }
-            case 6 -> { // Remaining Time for Books
-                List<BorrowRecord> activeBorrows = service.getActiveBorrowRecordsForUser(user.getUsername());
-                if (activeBorrows.isEmpty()) {
-                    System.out.println("You have no active borrowed books.");
-                    return 0;
-                }
-                for (BorrowRecord record : activeBorrows) {
-                    long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
-                    if (daysRemaining < 0) {
-                        System.out.println("ISBN: " + record.getIsbn() + " is overdue by " + Math.abs(daysRemaining) + " day(s).");
-                    } else {
-                        System.out.println("ISBN: " + record.getIsbn() + " - " + daysRemaining + " day(s) remaining.");
-                    }
-                }
-                return 0;
-            }
-
-            // -----------------------------
-            // CDs
-            // -----------------------------
-            case 7 -> { // Search CD
-                System.out.print("Enter title/author/ISBN to search: ");
-                String keyword = input.nextLine();
-                List<CD> foundCDs = service.searchCD(keyword);
-                if (foundCDs.isEmpty()) {
-                    System.out.println("No matching CDs found!");
-                } else {
-                    System.out.println("Found CDs:");
-                    for (CD cd : foundCDs) System.out.println(cd);
-                }
-                return 0;
-            }
-            case 8 -> { // Borrow CD
-                System.out.print("Enter ISBN to borrow: ");
-                String isbnBorrow = input.nextLine();
-                CD cdToBorrow = service.findCDByIsbn(isbnBorrow);
-                if (cdToBorrow == null) {
-                    System.out.println("CD not found.");
-                    return 0;
-                }
-                if (!cdToBorrow.isAvailable()) {
-                    System.out.println("CD is currently not available :(");
-                    return 0;
-                }
-                if (service.borrowCD(cdToBorrow, user.getUsername())) {
-                    System.out.println("CD borrowed successfully for 7 days. Due date: " + cdToBorrow.getDueDate());
-                } else {
-                    System.out.println("Could not borrow CD.");
-                }
-                return 0;
-            }
-            case 9 -> { // Return CD
-                System.out.print("Enter ISBN to return: ");
-                String isbnReturn = input.nextLine();
-                CD cdToReturn = service.findCDByIsbn(isbnReturn);
-                if (cdToReturn == null) {
-                    System.out.println("CD not found.");
-                    return 0;
-                }
-                boolean hasActiveLoan = service.getActiveBorrowRecordsForUser(user.getUsername()).stream()
-                        .anyMatch(r -> r.getIsbn().equalsIgnoreCase(isbnReturn));
-                if (!hasActiveLoan) {
-                    System.out.println("This CD is not borrowed.");
-                    return 0;
-                }
-                if (service.returnCD(cdToReturn, user.getUsername())) {
-                    System.out.println("CD returned successfully.");
-                    int outstanding = service.getOutstandingFine(user.getUsername());
-                    if (outstanding > 0) {
-                        System.out.println("You have outstanding fines: " + outstanding + " NIS.");
-                    }
-                } else {
-                    System.out.println("Could not return CD.");
-                }
-                return 0;
-            }
-            case 10 -> { // Display All CDs
-                service.getCDs().forEach(System.out::println);
-                return 0;
-            }
-            case 11 -> { // Remaining Time for CDs
-                List<BorrowRecord> activeBorrows = service.getActiveBorrowRecordsForUser(user.getUsername());
-                boolean anyCD = false;
-                for (BorrowRecord record : activeBorrows) {
-                    CD cd = service.findCDByIsbn(record.getIsbn());
-                    if (cd != null) {
-                        anyCD = true;
-                        long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
-                        if (daysRemaining < 0) {
-                            System.out.println("CD ISBN: " + record.getIsbn() + " is overdue by " + Math.abs(daysRemaining) + " day(s).");
-                        } else {
-                            System.out.println("CD ISBN: " + record.getIsbn() + " - " + daysRemaining + " day(s) remaining.");
-                        }
-                    }
-                }
-                if (!anyCD) System.out.println("You have no active borrowed CDs.");
-                return 0;
-            }
-
-            // -----------------------------
-            // Logout / Exit
-            // -----------------------------
+            case 1 -> searchBook(input, service);
+            case 2 -> borrowBook(input, service, user);
+            case 3 -> returnBook(input, service, user);
+            case 4 -> displayAllBooks(service);
+            case 5 -> payFines(input, service, user);
+            case 6 -> viewRemainingBooks(service, user);
+            case 7 -> searchCD(input, service);
+            case 8 -> borrowCD(input, service, user);
+            case 9 -> returnCD(input, service, user);
+            case 10 -> displayAllCDs(service);
+            case 11 -> viewRemainingCDs(service, user);
             case 12 -> { // Logout
                 if (auth.logout()) {
                     System.out.println("Logged out successfully.");
@@ -247,11 +70,314 @@ public class Member {
                 System.out.println("Exiting...");
                 return 2;
             }
-
             default -> {
                 System.out.println("Invalid option. Try again.");
                 return 0;
             }
+        }
+        return 0;
+    }
+
+    // ------------------------------
+    // Books
+    // ------------------------------
+    private static int searchBook(Scanner input, MediaService service) {
+        System.out.print("Enter title/author/ISBN to search: ");
+        String keyword = input.nextLine();
+        List<Book> foundBooks = service.searchBook(keyword);
+        if (foundBooks.isEmpty()) {
+            System.out.println("No matching books found!");
+        } else {
+            System.out.println("Found books:");
+            for (Book b : foundBooks) System.out.println(b);
+        }
+        return 0;
+    }
+
+    private static int borrowBook(Scanner input, MediaService service, Roles user) {
+        System.out.print("Enter ISBN to borrow: ");
+        String isbnBorrow = input.nextLine();
+        Book bookToBorrow = service.findBookByIsbn(isbnBorrow);
+        if (bookToBorrow == null) {
+            System.out.println("Book not found.");
+            return 0;
+        }
+        if (!bookToBorrow.isAvailable()) {
+            System.out.println("Book is currently not available :(");
+            return 0;
+        }
+
+        if (service.borrowBook(bookToBorrow, user.getUsername())) {
+            System.out.println("✅ Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
+        } else {
+            System.out.println("Could not borrow book.");
+        }
+        return 0;
+    }
+
+    private static int returnBook(Scanner input, MediaService service, Roles user) {
+        System.out.print("Enter ISBN to return: ");
+        String isbnReturn = input.nextLine();
+        Book bookToReturn = service.findBookByIsbn(isbnReturn);
+        if (bookToReturn == null) {
+            System.out.println("Book not found.");
+            return 0;
+        }
+        boolean hasActiveLoan = service.getActiveBorrowRecordsForUser(user.getUsername()).stream()
+                .anyMatch(r -> r.getIsbn().equalsIgnoreCase(isbnReturn));
+        if (!hasActiveLoan) {
+            System.out.println("This book is not borrowed.");
+            return 0;
+        }
+        if (service.returnBook(bookToReturn, user.getUsername())) {
+            System.out.println("Book returned successfully.");
+            int outstanding = service.getOutstandingFine(user.getUsername());
+            if (outstanding > 0) {
+                System.out.println("You have outstanding fines: " + outstanding + " NIS.");
+            }
+        } else {
+            System.out.println("Could not return book.");
+        }
+        return 0;
+    }
+
+    private static void displayAllBooks(MediaService service) {
+        service.getBooks().forEach(System.out::println);
+    }
+
+    private static void payFines(Scanner input, MediaService service, Roles user) {
+        int outstanding = service.getOutstandingFine(user.getUsername());
+        if (outstanding == 0) {
+            System.out.println("You have no outstanding fines.");
+            return;
+        }
+        System.out.println("Your outstanding fines: " + outstanding + " NIS.");
+        System.out.print("Enter amount to pay: ");
+        int amt;
+        try {
+            amt = Integer.parseInt(input.nextLine().trim());
+        } catch (Exception e) {
+            System.out.println("Invalid amount.");
+            return;
+        }
+        if (amt <= 0) {
+            System.out.println("Amount must be positive.");
+            return;
+        }
+        if (amt > outstanding) amt = outstanding;
+
+        service.payFine(user.getUsername(), amt);
+        System.out.println("Paid " + amt + " NIS. Remaining fines: " + service.getOutstandingFine(user.getUsername()) + " NIS.");
+    }
+
+    private static void viewRemainingBooks(MediaService service, Roles user) {
+        List<BorrowRecord> activeBorrows = service.getActiveBorrowRecordsForUser(user.getUsername());
+        boolean anyBook = false;
+
+        for (BorrowRecord record : activeBorrows) {
+            Book book = service.findBookByIsbn(record.getIsbn());
+            if (book != null) {
+                anyBook = true;
+                long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
+                if (daysRemaining < 0) {
+                    System.out.println("Book ISBN: " + record.getIsbn() + " is overdue by " + Math.abs(daysRemaining) + " day(s).");
+                } else {
+                    System.out.println("Book ISBN: " + record.getIsbn() + " - " + daysRemaining + " day(s) remaining.");
+                }
+            }
+        }
+
+        if (!anyBook) System.out.println("You have no active borrowed books.");
+    }
+
+    // ------------------------------
+    // CDs
+    // ------------------------------
+    private static int searchCD(Scanner input, MediaService service) {
+        System.out.print("Enter title/author/ISBN to search: ");
+        String keyword = input.nextLine();
+        List<CD> foundCDs = service.searchCD(keyword);
+        if (foundCDs.isEmpty()) {
+            System.out.println("No matching CDs found!");
+        } else {
+            System.out.println("Found CDs:");
+            for (CD cd : foundCDs) System.out.println(cd);
+        }
+        return 0;
+    }
+
+    private static int borrowCD(Scanner input, MediaService service, Roles user) {
+        System.out.print("Enter CD ISBN to borrow: ");
+        String cdIsbn = input.nextLine();
+
+        CD cdToBorrow = service.findCDByIsbn(cdIsbn);
+        if (cdToBorrow == null) {
+            System.out.println("CD not found.");
+            return 0;
+        }
+
+        if (!cdToBorrow.isAvailable()) {
+            System.out.println("CD is currently not available :(");
+            return 0;
+        }
+
+        if (service.borrowCD(cdToBorrow, user.getUsername())) {
+            System.out.println("CD borrowed successfully for 7 days. Due date: " + cdToBorrow.getDueDate());
+        } else {
+            System.out.println("Could not borrow CD.");
+        }
+        return 0;
+    }
+
+    private static int returnCD(Scanner input, MediaService service, Roles user) {
+        System.out.print("Enter ISBN to return: ");
+        String isbnReturn = input.nextLine();
+
+        CD cdToReturn = service.findCDByIsbn(isbnReturn);
+        if (cdToReturn == null) {
+            System.out.println("CD not found.");
+            return 0;
+        }
+
+        boolean hasActiveLoan = service.getActiveBorrowRecordsForUser(user.getUsername())
+                .stream()
+                .anyMatch(r -> r.getIsbn().equalsIgnoreCase(isbnReturn));
+        if (!hasActiveLoan) {
+            System.out.println("This CD is not borrowed.");
+            return 0;
+        }
+
+        if (service.returnCD(cdToReturn, user.getUsername())) {
+            System.out.println("CD returned successfully.");
+
+            int outstanding = getOutstandingFineFromFile(user.getUsername());
+
+            if (outstanding > 0) {
+                System.out.println("You have outstanding fines: " + outstanding + " NIS.");
+                System.out.print("Do you want to pay now? (yes/no): ");
+                String payNow = input.nextLine().trim();
+
+                if (payNow.equalsIgnoreCase("yes")) {
+                    System.out.print("Enter amount to pay: ");
+                    int amt;
+                    try {
+                        amt = Integer.parseInt(input.nextLine().trim());
+                    } catch (Exception e) {
+                        System.out.println("Invalid amount.");
+                        return 0;
+                    }
+
+                    if (amt <= 0) {
+                        System.out.println("Amount must be positive.");
+                        return 0;
+                    }
+
+                    if (amt > outstanding) amt = outstanding;
+
+                    service.payFine(user.getUsername(), amt);
+                    updateFineFile(user.getUsername(), amt);
+
+                    outstanding -= amt;
+                    System.out.println("Paid " + amt + " NIS. Remaining fines: " + outstanding + " NIS.");
+                }
+            } else {
+                System.out.println("No outstanding fines for this user.");
+            }
+
+        } else {
+            System.out.println("Could not return CD.");
+        }
+        return 0;
+    }
+
+    private static void displayAllCDs(MediaService service) {
+        service.getCDs().forEach(System.out::println);
+    }
+
+    private static void viewRemainingCDs(MediaService service, Roles user) {
+        List<BorrowRecord> activeBorrows = service.getActiveBorrowRecordsForUser(user.getUsername());
+        boolean anyCD = false;
+
+        for (BorrowRecord record : activeBorrows) {
+            CD cd = service.findCDByIsbn(record.getIsbn());
+            if (cd != null) { // فقط CDs سيتم التعامل معها
+                anyCD = true;
+                long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
+                if (daysRemaining < 0) {
+                    System.out.println("CD ISBN: " + record.getIsbn() + " is overdue by " + Math.abs(daysRemaining) + " day(s).");
+                } else {
+                    System.out.println("CD ISBN: " + record.getIsbn() + " - " + daysRemaining + " day(s) remaining.");
+                }
+            }
+        }
+
+        if (!anyCD) {
+            System.out.println("You have no active borrowed CDs.");
+        }
+    }
+
+    // ------------------------------
+    // File-based fines
+    // ------------------------------
+    public static int getOutstandingFineFromFile(String username) {
+        File file = new File(fineFilePath);
+
+        if (!file.exists()) return 0; // إذا الملف غير موجود، لا غرامة
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts[0].equalsIgnoreCase(username)) {
+                    return Integer.parseInt(parts[1].trim());
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading fine file: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    public static void updateFineFile(String username, int newFine) {
+        File file = new File(fineFilePath);
+        List<String> lines = new ArrayList<>();
+        boolean userFound = false;
+
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                System.out.println("Error creating fine file: " + e.getMessage());
+                return;
+            }
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts[0].equalsIgnoreCase(username)) {
+                    line = username + "," + newFine; // تحديث الغرامة الجديدة
+                    userFound = true;
+                }
+                lines.add(line);
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading fine file: " + e.getMessage());
+            return;
+        }
+
+        if (!userFound) {
+            lines.add(username + "," + newFine);
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+            for (String l : lines) {
+                bw.write(l);
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            System.out.println("Error writing fine file: " + e.getMessage());
         }
     }
 }

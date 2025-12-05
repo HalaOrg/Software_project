@@ -1,18 +1,163 @@
 package edu.library.service;
 
+import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+
 class AuthServiceTest {
+
+    private AuthService authService;
+    private FineService fineService;
+    private BorrowRecordService mockBorrow;
+
+    @BeforeEach
+    void setUp() {
+        fineService = mock(FineService.class);
+        authService = new AuthService(fineService);
+
+        // نضيف مستخدمين للاختبار
+        authService.addUser("admin", "adminpwd", "ADMIN", "admin@example.com");
+        authService.addUser("member1", "pwd1", "MEMBER", "member1@example.com");
+        authService.addUser("member2", "pwd2", "MEMBER", "member2@example.com");
+
+        mockBorrow = mock(BorrowRecordService.class);
+    }
+
+    @Test
+    void testRemoveUserWithRestrictions() {
+        // تسجيل دخول كـ admin
+        authService.login("admin", "adminpwd");
+
+        // 1️⃣ حالة: currentUser = null أو ليس admin
+        authService.logout();
+        assertFalse(authService.removeUserWithRestrictions("member1", mockBorrow));
+        authService.login("admin", "adminpwd");
+
+        // 2️⃣ حالة: username = null أو نفس admin
+        assertFalse(authService.removeUserWithRestrictions(null, mockBorrow));
+        assertFalse(authService.removeUserWithRestrictions("admin", mockBorrow));
+
+        // 3️⃣ حالة: المستخدم عنده balance > 0
+        when(fineService.getBalance("member1")).thenReturn(50);
+        assertFalse(authService.removeUserWithRestrictions("member1", mockBorrow));
+
+        // 4️⃣ حالة: المستخدم عنده borrow records active
+        when(fineService.getBalance("member2")).thenReturn(0);
+        BorrowRecord fakeRecord = mock(BorrowRecord.class);
+        when(mockBorrow.getActiveBorrowRecordsForUser("member2"))
+                .thenReturn(Collections.singletonList(fakeRecord));
+        assertFalse(authService.removeUserWithRestrictions("member2", mockBorrow));
+
+        // 5️⃣ حالة: كل الشروط صح → يجب أن يتم الحذف
+        authService.addUser("member3", "pwd3", "MEMBER", "member3@example.com");
+        when(fineService.getBalance("member3")).thenReturn(0);
+        when(mockBorrow.getActiveBorrowRecordsForUser("member3"))
+                .thenReturn(Collections.emptyList());
+
+        assertTrue(authService.removeUserWithRestrictions("member3", mockBorrow));
+        assertFalse(authService.userExists("member3"));
+    }
+
+    @Test
+    void testDefaultConstructor() {
+        // هذا سيستخدم resolveDefault("users.txt") و FineService افتراضي
+        AuthService defaultAuth = new AuthService();
+        assertNotNull(defaultAuth);
+    }
+
+    @Test
+    void testConstructorWithFineService() {
+        AuthService auth = new AuthService(fineService);
+        assertNotNull(auth);
+    }
+
+    @Test
+    void testAddUserOverload() {
+        // نختبر الدالة اللي ترجع overload
+        Roles role = authService.addUser("user1", "pass1", "MEMBER", "user1@example.com");
+        assertNotNull(role);
+
+        assertEquals("user1", role.getUsername());
+        assertEquals("MEMBER", role.getRoleName());
+        assertEquals("user1@example.com", role.getEmail());
+    }
+
+    @Test
+    void testResolveDefaultViaConstructor() throws IOException {
+        // مجرد اختبار أنه constructor ينجح ويقوم بإنشاء الملف حتى لو لم يكن موجود
+        Path tempFile = tempDir.resolve("users.txt");
+        assertFalse(Files.exists(tempFile));
+        AuthService auth = new AuthService(tempFile.toString());
+        assertTrue(Files.exists(tempFile));
+    }
+
+    @Test
+    void testAddUserAndCatchIOExceptions() throws IOException {
+        // ملف مؤقت مع path غير صالح → سيغطي catch(IOException) عند إنشاء أو حفظ الملف
+        Path badPath = tempDir.resolve("invalid_dir/users.txt");
+        AuthService auth = new AuthService(badPath.toString());
+
+        // addUser يجب ألا يرمي exception
+        assertDoesNotThrow(() -> auth.addUser("userX", "pwdX", "MEMBER"));
+    }
+
+    @Test
+    void testAddUserWithNullParameters() {
+        Path usersFile = tempDir.resolve("users.txt");
+        AuthService auth = new AuthService(usersFile.toString());
+
+        assertNull(auth.addUser(null, "pwd", "MEMBER", "x@example.com"));
+        assertNull(auth.addUser("u", null, "MEMBER", "x@example.com"));
+        assertNull(auth.addUser("u", "pwd", null, "x@example.com"));
+        assertNull(auth.addUser("u", "pwd", "MEMBER", null));
+        assertNull(auth.addUser("u", "pwd", "MEMBER", "   "));
+    }
+
+    @Test
+    void testUserExistsAndRemoveUserCaseInsensitive() {
+        Path usersFile = tempDir.resolve("users.txt");
+        AuthService auth = new AuthService(usersFile.toString());
+
+        auth.addUser("TestUser", "pwd", "MEMBER", "t@example.com");
+        assertTrue(auth.userExists("testuser"));
+        assertTrue(auth.userExists("TESTUSER"));
+        assertTrue(auth.removeUser("TeStUsEr"));
+        assertFalse(auth.userExists("testuser"));
+    }
+
+    @Test
+    void testLogoutAndCurrentAdmin() throws IOException {
+        Path usersFile = tempDir.resolve("users.txt");
+        Files.write(usersFile, Collections.singletonList("admin,adminpwd,ADMIN,admin@example.com"));
+        AuthService auth = new AuthService(usersFile.toString());
+
+        assertNull(auth.getCurrentUser());
+        Roles admin = auth.login("admin", "adminpwd");
+        assertNotNull(admin);
+        assertTrue(auth.getCurrentAdmin().isAdmin());
+
+        assertTrue(auth.logout());
+        assertNull(auth.getCurrentAdmin());
+        assertNull(auth.getCurrentUser());
+        assertFalse(auth.logout()); // logout ثانية بدون مستخدم
+    }
+
 
     @TempDir
     Path tempDir;
@@ -112,7 +257,6 @@ class AuthServiceTest {
         AuthService auth = new AuthService(usersFile.toString());
 
         assertNull(auth.login("eve", "wrong"));
-        // successful attempt
         Roles eve = auth.login("eve", "evepwd");
         assertNotNull(eve);
         assertEquals("eve", auth.getCurrentUser().getUsername());
@@ -319,7 +463,6 @@ class AuthServiceTest {
         assertSame(auth.getCurrentUser(), auth.getCurrentAdmin());
     }
 
-
     @Test
     void removeUser_null_returnsFalse() {
         Path usersFile = tempDir.resolve("users.txt");
@@ -331,12 +474,40 @@ class AuthServiceTest {
     void loadUsers_skipsMalformedLines() throws IOException {
         Path usersFile = tempDir.resolve("users.txt");
         Files.write(usersFile, Arrays.asList(
-                "shortline",
-                "good,user, MEMBER,good@example.com"
+                "shortline", // معيب
+                "good,user,MEMBER,good@example.com" // صحيح
         ));
 
         AuthService auth = new AuthService(usersFile.toString());
-        assertFalse(auth.userExists("shortline"));
-        assertTrue(auth.userExists("good"));
+        assertFalse(auth.userExists("shortline")); // يجب أن يكون false
+        assertTrue(auth.userExists("good"));       // يجب أن يكون true
     }
+
+    @Test
+    void testIOExceptionDuringAuthServiceInit() {
+        // path غير صالح عمداً → سيؤدي إلى IOException عند إنشاء الملف
+        String badPath = "Z:\\invalid_path\\users.txt";
+
+        // لا يجب أن يرمي استثناء عند init
+        assertDoesNotThrow(() -> new AuthService(badPath));
+    }
+    @Test
+    void testIOExceptionInSaveUsersToFile() {
+        // مسار مستحيل الكتابة إليه → يجبر FileWriter على رمي IOException
+        String badPath = "/invalid/path/users.txt";
+
+        // إنشاء AuthService باستخدام المسار غير الصالح
+        AuthService auth = new AuthService(badPath, new FineService());
+
+        // addUser يجب أن يدخل catch ولا يرمي Exception
+        assertDoesNotThrow(() ->
+                auth.addUser("userX", "pwX", "MEMBER")
+        );
+    }
+
+
+
+
+
+
 }

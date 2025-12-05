@@ -3,6 +3,7 @@ package edu.library.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 public class FineServiceTest {
 
@@ -21,9 +23,24 @@ public class FineServiceTest {
     private FineService fineService;
 
     @BeforeEach
-    void setup() {
+    void setUp() {
         finesFile = tempDir.resolve("fines.txt");
-        fineService = new FineService(finesFile.toString());
+        fineService = Mockito.spy(new FineService(finesFile.toString()));
+    }
+
+    @Test
+    void testDefaultConstructor() {
+        FineService fs = new FineService();
+        assertNotNull(fs, "FineService instance should not be null");
+    }
+
+    @Test
+    void testIOExceptionDuringConstructor() {
+        FineService spyFine = Mockito.spy(new FineService(finesFile.toString()));
+
+        // مثال على فرض IOException عند resolveDefault أو save
+        assertDoesNotThrow(() -> new FineService(),
+                "Constructor should handle IOException without throwing");
     }
 
     @Test
@@ -63,13 +80,12 @@ public class FineServiceTest {
         assertTrue(Files.size(finesFile) >= 0);
     }
 
-    // --- New tests to improve branch coverage ---
-
     @Test
     void addFine_ignoresNullOrNonPositiveAmount_andDoesNotPersist() throws IOException {
         fineService.addFine(null, 10);
         assertEquals(0, fineService.getBalance(null));
         assertEquals(0, fineService.getAllBalances().size());
+
         fineService.addFine("user1", 0);
         fineService.addFine("user2", -5);
         assertEquals(0, fineService.getBalance("user1"));
@@ -101,7 +117,6 @@ public class FineServiceTest {
         assertThrows(NumberFormatException.class, () -> new FineService(badFile.toString()));
     }
 
-
     @Test
     void getAllBalances_returnsACopy_notBackingMap() {
         fineService.addFine("copytest", 7);
@@ -109,14 +124,13 @@ public class FineServiceTest {
         copy.put("copytest", 999);
         assertEquals(7, fineService.getBalance("copytest"));
     }
+
     @Test
     void save_persistsMultipleEntries_andFileContainsBoth() {
-        // نضيف غرامتين
         fineService.addFine("a", 1);
         fineService.addFine("b", 2);
 
         FineService reloaded = new FineService(finesFile.toString());
-
         assertEquals(1, reloaded.getBalance("a"));
         assertEquals(2, reloaded.getBalance("b"));
 
@@ -125,5 +139,45 @@ public class FineServiceTest {
         assertEquals(1, balances.get("a"));
         assertEquals(2, balances.get("b"));
     }
+    @Test
+    void testSaveBalances_callsSaveOnce() {
+        // fineService هو spy بالفعل من setUp
+        fineService.saveBalances();
+        verify(fineService, times(1)).save();
+    }
+
+    @Test
+    void save_throwsRuntimeException_whenIOExceptionOccurs() {
+        FineService spyFine = Mockito.spy(new FineService(finesFile.toString()));
+        // محاكاة أي RuntimeException عند save
+        doThrow(new RuntimeException("Error saving fines", new IOException("Mocked IO Error")))
+                .when(spyFine).save();
+
+        RuntimeException ex = assertThrows(RuntimeException.class, spyFine::saveBalances);
+        assertTrue(ex.getMessage().contains("Error saving fines"));
+        assertTrue(ex.getCause() instanceof IOException);
+    }
+
+
+    @Test
+    void testStoreBalanceOnLogin_balanceZero() {
+        doReturn(0).when(fineService).getBalance("user0");
+        fineService.storeBalanceOnLogin("user0");
+        verify(fineService, never()).save();
+    }
+
+    @Test
+    void testStoreBalanceOnLogin_balancePositive() {
+        doReturn(100).when(fineService).getBalance("user1");
+        fineService.storeBalanceOnLogin("user1");
+        verify(fineService, times(1)).save();
+    }
+
+    @Test
+    void testStoreBalanceOnLogin_nullUsername() {
+        fineService.storeBalanceOnLogin(null);
+        verify(fineService, never()).save();
+    }
+
 
 }

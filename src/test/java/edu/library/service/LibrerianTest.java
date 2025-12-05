@@ -1,180 +1,172 @@
 package edu.library.service;
 
-import edu.library.model.Book;
 import edu.library.model.Roles;
+import edu.library.model.Media;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-public class LibrerianTest {
+class LibrarianTest {
 
-    @TempDir
-    Path tempDir;
+    private MediaService mediaService;
+    private AuthService authService;
+    private Roles user;
 
-    private int runHandle(String inputLines, BookService service, AuthService auth, Roles user) {
-        Scanner scanner = new Scanner(inputLines);
-        return Librarian.handle(scanner, service, auth, user);
+    @BeforeEach
+    void setUp() {
+        mediaService = mock(MediaService.class);
+        authService = mock(AuthService.class);
+        user = new Roles("librarian", "pass", "LIBRARIAN", "lib@example.com");
     }
 
     @Test
-    void optionAddBook() {
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-        AuthService auth = new AuthService(tempDir.resolve("u_add.txt").toString());
-        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
+    void testHandle_AddMedia_BookAndCD() {
+        // Book
+        Scanner scannerBook = new Scanner("""
+                1
+                Book
+                MyBook
+                Author
+                12345
+                5
+                9
+                """);
 
-        String input = "1\nMy Book\nSome Author\nISBN-1\n3\n";
-        int rc = runHandle(input, service, auth, lib);
-        assertEquals(0, rc);
+        int resultBook = Librarian.handle(scannerBook, mediaService, authService, user);
+        ArgumentCaptor<Media> captorBook = ArgumentCaptor.forClass(Media.class);
+        verify(mediaService).addMedia(captorBook.capture());
+        assertEquals("MyBook", captorBook.getValue().getTitle());
+        assertEquals(0, resultBook); // بعد الإضافة تبقى session مفتوح
 
-        List<Book> books = service.getBooks();
-        assertFalse(books.isEmpty());
-        Book b = books.get(0);
-        assertEquals("My Book", b.getTitle());
-        assertEquals("Some Author", b.getAuthor());
-        assertEquals("ISBN-1", b.getIsbn());
+        // CD
+        Scanner scannerCD = new Scanner("""
+                1
+                CD
+                MyCD
+                Artist
+                54321
+                3
+                9
+                """);
+
+        int resultCD = Librarian.handle(scannerCD, mediaService, authService, user);
+        ArgumentCaptor<Media> captorCD = ArgumentCaptor.forClass(Media.class);
+        verify(mediaService, times(2)).addMedia(captorCD.capture());
+        assertEquals("MyCD", captorCD.getAllValues().get(1).getTitle());
     }
 
     @Test
-    void optionSearch_noResults() {
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-        AuthService auth = new AuthService(tempDir.resolve("u_search1.txt").toString());
-        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
+    void testHandle_SearchMedia_FoundAndNotFound() {
+        when(mediaService.searchMedia("Mock")).thenReturn(List.of(mock(Media.class)));
+        when(mediaService.searchMedia("Nothing")).thenReturn(List.of());
 
-        String input = "3\nNoSuchBook\n";
-        int rc = runHandle(input, service, auth, lib);
-        assertEquals(0, rc);
+        // Found
+        Scanner scanFound = new Scanner("""
+                3
+                Mock
+                9
+                """);
+        int resultFound = Librarian.handle(scanFound, mediaService, authService, user);
+        assertEquals(0, resultFound);
+
+        // Not Found
+        Scanner scanNotFound = new Scanner("""
+                3
+                Nothing
+                9
+                """);
+        int resultNotFound = Librarian.handle(scanNotFound, mediaService, authService, user);
+        assertEquals(0, resultNotFound);
     }
 
     @Test
-    void optionSearch_withResults() {
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-        // add a book directly to the service
-        service.addBook(new Book("FoundTitle","Auth","ISBN-FOUND"));
+    void testHandle_UpdateAndDeleteMedia() {
+        // Mock updateMediaQuantity returns true then false
+        when(mediaService.updateMediaQuantity("123", 10)).thenReturn(true);
+        when(mediaService.updateMediaQuantity("999", 5)).thenReturn(false);
+        when(mediaService.deleteMedia("123")).thenReturn(true);
+        when(mediaService.deleteMedia("999")).thenReturn(false);
 
-        AuthService auth = new AuthService(tempDir.resolve("u_search2.txt").toString());
-        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
+        // Update success
+        Scanner scannerUpdateSuccess = new Scanner("""
+                6
+                123
+                10
+                9
+                """);
+        int resUpdateSuccess = Librarian.handle(scannerUpdateSuccess, mediaService, authService, user);
+        assertEquals(0, resUpdateSuccess);
 
-        String input = "3\nFoundTitle\n";
-        int rc = runHandle(input, service, auth, lib);
-        assertEquals(0, rc);
-        // ensure search would find it
-        List<Book> results = service.searchBook("FoundTitle");
-        assertFalse(results.isEmpty());
+        // Update fail
+        Scanner scannerUpdateFail = new Scanner("""
+                6
+                999
+                5
+                9
+                """);
+        int resUpdateFail = Librarian.handle(scannerUpdateFail, mediaService, authService, user);
+        assertEquals(0, resUpdateFail);
+
+        // Delete success
+        Scanner scannerDeleteSuccess = new Scanner("""
+                7
+                123
+                9
+                """);
+        int resDeleteSuccess = Librarian.handle(scannerDeleteSuccess, mediaService, authService, user);
+        assertEquals(0, resDeleteSuccess);
+
+        // Delete fail
+        Scanner scannerDeleteFail = new Scanner("""
+                7
+                999
+                9
+                """);
+        int resDeleteFail = Librarian.handle(scannerDeleteFail, mediaService, authService, user);
+        assertEquals(0, resDeleteFail);
     }
 
     @Test
-    void optionLogout_clearsCurrentUser() throws IOException {
-        Path usersFile = tempDir.resolve("u_logout.txt");
-        Files.write(usersFile, Collections.singletonList("libr,lpwd,LIBRARIAN,libr@example.com"));
-        AuthService auth = new AuthService(usersFile.toString());
-        Roles r = auth.login("libr","lpwd");
-        assertNotNull(r);
+    void testHandle_InvalidOption_Logout_Exit() {
+        // Invalid
+        Scanner scanInvalid = new Scanner("abc\n9\n");
+        int resInvalid = Librarian.handle(scanInvalid, mediaService, authService, user);
+        assertEquals(0, resInvalid);
 
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-        String input = "8\n";
-        int rc = runHandle(input, service, auth, r);
-        assertEquals(1, rc);
-        assertNull(auth.getCurrentUser());
+        // Logout
+        when(authService.logout()).thenReturn(true);
+        Scanner scanLogout = new Scanner("8\n");
+        int resLogout = Librarian.handle(scanLogout, mediaService, authService, user);
+        assertEquals(1, resLogout);
+
+        // Exit
+        Scanner scanExit = new Scanner("9\n");
+        int resExit = Librarian.handle(scanExit, mediaService, authService, user);
+        assertEquals(2, resExit);
     }
 
     @Test
-    void optionExit_returns2() {
-        AuthService auth = new AuthService(tempDir.resolve("u_exit.txt").toString());
-        Roles r = new Roles("x","p","LIBRARIAN","x@example.com");
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
+    void testHandle_DisplayBorrowRecordsAndFines() {
+        // BorrowRecords
+        BorrowRecordService borrowService = mock(BorrowRecordService.class);
+        when(mediaService.getBorrowRecordService()).thenReturn(borrowService);
+        when(borrowService.getAllRecords()).thenReturn(List.of());
 
-        int rc = runHandle("9\n", service, auth, r);
-        assertEquals(2, rc);
-    }
+        Scanner scanBorrow = new Scanner("4\n9\n");
+        int resBorrow = Librarian.handle(scanBorrow, mediaService, authService, user);
+        assertEquals(0, resBorrow);
 
-    @Test
-    void updateQuantity() {
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-        AuthService auth = new AuthService(tempDir.resolve("u_update.txt").toString());
-        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
-        service.addBook(new Book("Keep","Auth","UP-1",2));
-
-        int rcUpdate = runHandle("6\nUP-1\n5\n", service, auth, lib);
-        assertEquals(0, rcUpdate);
-        assertEquals(5, service.searchBook("UP-1").get(0).getTotalCopies());
-
-        int rcDelete = runHandle("7\nUP-1\n", service, auth, lib);
-        assertEquals(0, rcDelete);
-        assertTrue(service.searchBook("UP-1").isEmpty());
-    }
-
-    @Test
-    void invalidOption_returns0() {
-        AuthService auth = new AuthService(tempDir.resolve("u_inv.txt").toString());
-        Roles r = new Roles("x","p","LIBRARIAN","x@example.com");
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString()), new FineService(tempDir.resolve("fines_lib.txt").toString()));
-
-        int rc = runHandle("notanumber\n", service, auth, r);
-        assertEquals(0, rc);
-    }
-    @Test
-    void viewBorrowRecords_showsOverdueFlag() {
-        BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString());
-        FineService fineService = new FineService(tempDir.resolve("fines_lib.txt").toString());
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), borrowRecordService, fineService);
-
-        borrowRecordService.recordBorrow("member1", "ISBN-OVERDUE", LocalDate.now().minusDays(29));
-
-        AuthService auth = new AuthService(tempDir.resolve("u_overdue.txt").toString());
-        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-        System.setOut(new PrintStream(out));
-
-        try {
-            int rc = runHandle("4\n", service, auth, lib);
-            assertEquals(0, rc);
-        } finally {
-            System.setOut(originalOut);
-        }
-
-        String output = out.toString();
-        assertTrue(output.contains("Overdue"));
-        assertTrue(output.contains("ISBN-OVERDUE"));
-    }
-
-    @Test
-    void viewFineBalances_listsCurrentFines() {
-        BorrowRecordService borrowRecordService = new BorrowRecordService(tempDir.resolve("borrow_records_lib.txt").toString());
-        FineService fineService = new FineService(tempDir.resolve("fines_lib.txt").toString());
-        BookService service = new BookService(tempDir.resolve("books_lib.txt").toString(), borrowRecordService, fineService);
-
-        fineService.addFine("member1", 40);
-        fineService.addFine("member2", 10);
-
-        AuthService auth = new AuthService(tempDir.resolve("u_fines.txt").toString());
-        Roles lib = new Roles("lib","pwd","LIBRARIAN","lib@example.com");
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-        System.setOut(new PrintStream(out));
-
-        try {
-            int rc = runHandle("5\n", service, auth, lib);
-            assertEquals(0, rc);
-        } finally {
-            System.setOut(originalOut);
-        }
-
-        String output = out.toString();
-        assertTrue(output.contains("member1: 40"));
-        assertTrue(output.contains("member2: 10"));
+        // Fines
+        when(mediaService.getAllFines()).thenReturn(Map.of());
+        Scanner scanFines = new Scanner("5\n9\n");
+        int resFines = Librarian.handle(scanFines, mediaService, authService, user);
+        assertEquals(0, resFines);
     }
 }

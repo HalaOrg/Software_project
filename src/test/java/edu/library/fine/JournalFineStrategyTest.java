@@ -1,26 +1,42 @@
 package edu.library.fine;
 
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class JournalFineStrategyTest {
 
     @Test
-    void testCalculateFine_zeroOrNegativeOverdue() {
-        JournalFineStrategy strategy = new JournalFineStrategy();
-
-        // Fine should be 0 if overdue days are 0 or negative
-        assertEquals(0, strategy.calculateFine(0), "Overdue 0 days should return 0 fine");
-        assertEquals(0, strategy.calculateFine(-5), "Negative overdue days should return 0 fine");
+    void testCalculateFineZeroDays() {
+        FineStrategy strategy = new JournalFineStrategy();
+        int fine = strategy.calculateFine(0);
+        assertEquals(0, fine, "Fine should be 0 when overdueDays is 0");
     }
 
     @Test
-    void testCalculateFine_positiveOverdue() {
-        JournalFineStrategy strategy = new JournalFineStrategy();
+    void testCalculateFineNegativeDays() {
+        FineStrategy strategy = new JournalFineStrategy();
+        int fine = strategy.calculateFine(-5);
+        assertEquals(0, fine, "Fine should be 0 when overdueDays is negative");
+    }
 
-        // Fine = overdue days * 15
-        assertEquals(15, strategy.calculateFine(1), "1 day overdue should return 15 NIS");
-        assertEquals(75, strategy.calculateFine(5), "5 days overdue should return 75 NIS");
-        assertEquals(150, strategy.calculateFine(10), "10 days overdue should return 150 NIS");
+    @Test
+    void testCalculateFinePositiveDays() {
+        FineStrategy strategy = new JournalFineStrategy();
+        int fine = strategy.calculateFine(3);
+        assertEquals(45, fine, "Fine should be 15 * 3 = 45 for 3 overdue days");
+
+        fine = strategy.calculateFine(1);
+        assertEquals(15, fine, "Fine should be 15 for 1 overdue day");
+
+        fine = strategy.calculateFine(10);
+        assertEquals(150, fine, "Fine should be 15 * 10 = 150 for 10 overdue days");
+    }
+
+    @Test
+    void testLargeNumberOfDays() {
+        FineStrategy strategy = new JournalFineStrategy();
+        int fine = strategy.calculateFine(1000);
+        assertEquals(15000, fine, "Fine should scale correctly for large overdue days");
     }
 }

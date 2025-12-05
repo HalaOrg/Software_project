@@ -43,17 +43,14 @@ public class MediaService {
         this.timeProvider = timeProvider;
         this.fineCalculator = fineCalculator;
 
-        // ⬅️ تحميل البيانات بعد إنشاء الخدمة
         loadMediaFromFile(filePath);
     }
 
-    // Convenience constructor
     public MediaService(String filePath,
                         BorrowRecordService borrowRecordService,
                         FineService fineService) {
         this(filePath, borrowRecordService, fineService, new SystemTimeProvider(), new FineCalculator());
     }
-
 
     // -----------------------------
     //       LOAD / SAVE
@@ -68,21 +65,16 @@ public class MediaService {
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(";");
 
-                // type;title;author;isbn;total;available;dueDate
                 if (parts.length == 7) {
-
                     String type = parts[0];
                     String title = parts[1];
                     String author = parts[2];
                     String isbn = parts[3];
                     int total = Integer.parseInt(parts[4]);
                     int available = Integer.parseInt(parts[5]);
-
-                    LocalDate dueDate =
-                            parts[6].equals("null") ? null : LocalDate.parse(parts[6]);
+                    LocalDate dueDate = parts[6].equals("null") ? null : LocalDate.parse(parts[6]);
 
                     Media m;
-
                     if (type.equalsIgnoreCase("BOOK")) {
                         m = new Book(title, author, isbn, total, available);
                     } else {
@@ -99,10 +91,8 @@ public class MediaService {
         }
     }
 
-
     public void saveAllMediaToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-
             for (Media m : items) {
                 writer.write(String.format("%s;%s;%s;%s;%d;%d;%s%n",
                         (m instanceof Book) ? "BOOK" : "CD",
@@ -114,12 +104,10 @@ public class MediaService {
                         (m.getDueDate() != null ? m.getDueDate() : "null")
                 ));
             }
-
         } catch (IOException e) {
             System.out.println("Error saving media: " + e.getMessage());
         }
     }
-
 
     // -----------------------------
     //          CRUD
@@ -159,55 +147,54 @@ public class MediaService {
             if (m.getTitle().toLowerCase().contains(k) ||
                     m.getAuthor().toLowerCase().contains(k) ||
                     m.getIsbn().toLowerCase().contains(k)) {
-
                 result.add(m);
             }
         }
         return result;
     }
 
-    public void displayMedia() {
-        if (items.isEmpty()) {
-            System.out.println("No media available.");
-            return;
-        }
-        for (Media m : items) {
-            System.out.printf("%s | %s | ISBN: %s | Available: %d/%d | Due: %s%n",
-                    (m instanceof Book) ? "[Book]" : "[CD]",
-                    m.getTitle(),
-                    m.getIsbn(),
-                    m.getAvailableCopies(),
-                    m.getTotalCopies(),
-                    (m.getDueDate() != null ? m.getDueDate() : "None")
-            );
-        }
-    }
-
-
     // -----------------------------
     //          BORROW / RETURN
     // -----------------------------
     public boolean borrow(Media m, String username) {
-        if (!m.isAvailable()) {
+        if (m == null) {
             System.out.println("Item not available.");
             return false;
         }
+
+        // إذا ما في نسخ متاحة
+        if (m.getAvailableCopies() <= 0) {
+            m.setAvailable(false);
+            System.out.println("Item not available.");
+            return false;
+        }
+
+        // في حال وجود غرامات
         if (fineService.getBalance(username) > 0) {
             System.out.println("Pay fines before borrowing.");
             return false;
         }
 
+        // حساب تاريخ الإرجاع
         LocalDate dueDate = timeProvider.today().plusDays(m.getBorrowDurationDays());
+
+        // تقليل الكمية
         m.borrowOne();
+
+        // ضبط availability حسب الكمية الحالية
+        m.setAvailable(m.getAvailableCopies() > 0);
+
+        // ضبط موعد الإرجاع
         m.setDueDate(dueDate);
-        saveAllMediaToFile();
 
         borrowRecordService.recordBorrow(username, m.getIsbn(), dueDate);
+
+        saveAllMediaToFile();
         return true;
     }
 
-    public boolean returnMedia(Media m, String username) {
 
+    public boolean returnMedia(Media m, String username) {
         BorrowRecord active = borrowRecordService.findActiveBorrowRecord(username, m.getIsbn());
         if (active == null) return false;
 
@@ -228,7 +215,6 @@ public class MediaService {
 
         return true;
     }
-
 
     // -----------------------------
     //          HELPERS
@@ -261,7 +247,6 @@ public class MediaService {
         return borrowRecordService.hasActiveBorrows(username);
     }
 
-
     // -----------------------------
     //    Admin & Librarian
     // -----------------------------
@@ -270,13 +255,7 @@ public class MediaService {
     }
 
     public Map<String, Integer> getAllFines() {
-        Map<String, Integer> map = new HashMap<>();
-        for (BorrowRecord record : borrowRecordService.getRecords()) {
-            String user = record.getUsername();
-            int balance = fineService.getBalance(user);
-            if (balance > 0) map.put(user, balance);
-        }
-        return map;
+        return fineService.getAllBalances(); // ✅ استخدام FineService مباشرة
     }
 
     public List<Book> getBooks() {
@@ -297,8 +276,7 @@ public class MediaService {
 
         String k = keyword.toLowerCase();
         for (Media m : items) {
-            if (m instanceof Book) {
-                Book b = (Book) m;
+            if (m instanceof Book b) {
                 if (b.getTitle().toLowerCase().contains(k) ||
                         b.getAuthor().toLowerCase().contains(k) ||
                         b.getIsbn().toLowerCase().contains(k)) result.add(b);
@@ -308,10 +286,9 @@ public class MediaService {
     }
 
     public Book findBookByIsbn(String isbn) {
-        for (Media m : items)
-            if (m instanceof Book && m.getIsbn().equalsIgnoreCase(isbn))
-                return (Book) m;
-
+        for (Media m : items) {
+            if (m instanceof Book b && b.getIsbn().equalsIgnoreCase(isbn)) return b;
+        }
         return null;
     }
 
@@ -330,18 +307,17 @@ public class MediaService {
         }
         return active;
     }
-// -----------------------------
-// CD Methods
-// -----------------------------
 
+    // -----------------------------
+    // CD Methods
+    // -----------------------------
     public List<CD> searchCD(String keyword) {
         List<CD> result = new ArrayList<>();
         if (keyword == null || keyword.isBlank()) return result;
 
         String k = keyword.toLowerCase();
         for (Media m : items) {
-            if (m instanceof CD) {
-                CD cd = (CD) m;
+            if (m instanceof CD cd) {
                 if (cd.getTitle().toLowerCase().contains(k) ||
                         cd.getAuthor().toLowerCase().contains(k) ||
                         cd.getIsbn().toLowerCase().contains(k)) {
@@ -353,9 +329,9 @@ public class MediaService {
     }
 
     public CD findCDByIsbn(String isbn) {
-        for (Media m : items)
-            if (m instanceof CD && m.getIsbn().equalsIgnoreCase(isbn))
-                return (CD) m;
+        for (Media m : items) {
+            if (m instanceof CD cd && cd.getIsbn().equalsIgnoreCase(isbn)) return cd;
+        }
         return null;
     }
 
@@ -367,5 +343,21 @@ public class MediaService {
         return returnMedia(cd, username);
     }
 
+    public void displayMedia() {
+        if (items.isEmpty()) {
+            System.out.println("No media available.");
+            return;
+        }
+        for (Media m : items) {
+            System.out.printf("%s | %s | ISBN: %s | Available: %d/%d | Due: %s%n",
+                    (m instanceof Book) ? "[Book]" : "[CD]",
+                    m.getTitle(),
+                    m.getIsbn(),
+                    m.getAvailableCopies(),
+                    m.getTotalCopies(),
+                    (m.getDueDate() != null ? m.getDueDate() : "None")
+            );
+        }
+    }
 
 }

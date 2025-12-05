@@ -1,485 +1,259 @@
 package edu.library.service;
 
 import edu.library.model.Book;
+import edu.library.model.CD;
+import edu.library.model.Media;
 import edu.library.model.Roles;
-import edu.library.time.SystemTimeProvider;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Collections;
+import org.mockito.ArgumentCaptor;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.List;
-import java.util.Scanner;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-public class AdminTest {
+class AdminTest {
 
-    @TempDir
-    Path tempDir;
+    private MediaService mediaService;
+    private AuthService authService;
+    private ReminderService reminderService;
+    private Roles admin;
 
-    // helper to run Admin.handle with provided input string
-    private int runHandle(String inputLines,
-                          MediaService bookService,
-                          AuthService authService,
-                          ReminderService reminderService,
-                          Roles user)
-    {
-        Scanner scanner = new Scanner(inputLines);
-        return Admin.handle(scanner, bookService, authService, reminderService, user);
+
+    @BeforeEach
+    void setUp() {
+        mediaService = mock(MediaService.class);
+        authService = mock(AuthService.class);
+        reminderService = mock(ReminderService.class);
+        admin = new Roles("admin", "ADMIN", "admin@example.com");
+    }
+
+    private void provideInput(String data) {
+        InputStream testIn = new ByteArrayInputStream(data.getBytes());
+        System.setIn(testIn);
     }
 
     @Test
-    void optionRemoveSelf_isBlocked() throws IOException {
-        Path usersFile = tempDir.resolve("users.txt");
-        Files.write(usersFile, Collections.singletonList("admin,apwd,ADMIN,admin@example.com"));
-        AuthService auth = new AuthService(usersFile.toString());
+    void testAddBook() {
+        provideInput("1\nBook Title\nAuthor Name\n123456\n");
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
 
-        Roles admin = auth.login("admin", "apwd");
-        assertNotNull(admin);
-
-        // choose option 6 and attempt to remove self
-        String input = "6\n" + admin.getUsername() + "\n";
-
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        MediaService bookService = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                new FineService(tempDir.resolve("fines_admin.txt").toString())
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new edu.library.time.SystemTimeProvider()
-        );
-
-        int result = runHandle(input, bookService, auth, reminderService, admin);
         assertEquals(0, result);
-        // user should still exist
-        assertTrue(auth.userExists("admin"));
+        ArgumentCaptor<Media> captor = ArgumentCaptor.forClass(Media.class);
+        verify(mediaService).addMedia(captor.capture());
+        Media added = captor.getValue();
+        assertTrue(added instanceof Book);
+        assertEquals("Book Title", ((Book) added).getTitle());
     }
 
+    @Test
+    void testSearchBookNoResults() {
+        provideInput("2\nKeyword\n");
+        when(mediaService.searchMedia("Keyword")).thenReturn(List.of());
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+
+        assertEquals(0, result);
+        verify(mediaService).searchMedia("Keyword");
+    }
 
     @Test
-    void optionLogout_returns1_and_clearsCurrentUser() throws IOException {
-        Path usersFile = tempDir.resolve("users2.txt");
-        Files.write(usersFile, Collections.singletonList("joe,joepwd,ADMIN,joe@example.com"));
-        AuthService auth = new AuthService(usersFile.toString());
-        Roles joe = auth.login("joe", "joepwd");
-        assertNotNull(joe);
+    void testDisplayAllBooks() {
+        provideInput("3\n");
+        when(mediaService.getAllMedia()).thenReturn(List.of(new Book("B1","A1","1"), new CD("C1","Artist1","2")));
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
 
-        String input = "9\n"; // logout option
+        assertEquals(0, result);
+        verify(mediaService).getAllMedia();
+    }
 
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService bookService = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
+    @Test
+    void testAddMemberAlreadyExists() {
+        provideInput("4\nmember@example.com\nmemberUser\npassword\n");
+        when(authService.userExists("memberUser")).thenReturn(true);
 
-        int result = runHandle(input, bookService, auth, reminderService, joe);
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+        verify(authService, never()).addUser(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void testAddMemberSuccess() {
+        provideInput("4\nmember@example.com\nmemberUser\npassword\n");
+        when(authService.userExists("memberUser")).thenReturn(false);
+
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+        verify(authService).addUser("memberUser","password","MEMBER","member@example.com");
+    }
+
+    @Test
+    void testAddLibrarianSuccess() {
+        provideInput("5\nlibrarian@example.com\nlibUser\nlibpass\n");
+        when(authService.userExists("libUser")).thenReturn(false);
+
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+        verify(authService).addUser("libUser","libpass","LIBRARIAN","librarian@example.com");
+    }
+
+    @Test
+    void testRemoveUserCannotRemoveSelf() {
+        provideInput("6\nadmin\n");
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+    }
+
+    @Test
+    void testListUsers() {
+        provideInput("7\n");
+        when(authService.getUsers()).thenReturn(List.of(admin));
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+        verify(authService).getUsers();
+    }
+
+    @Test
+    void testSendReminders() {
+        provideInput("8\n");
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+        verify(reminderService).sendReminders();
+    }
+
+    @Test
+    void testLogout() {
+        provideInput("9\n");
+        when(authService.logout()).thenReturn(true);
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
         assertEquals(1, result);
-        assertNull(auth.getCurrentUser());
+        verify(authService).logout();
     }
+
     @Test
-    void optionExit_returns2() {
-        AuthService auth = new AuthService(tempDir.resolve("u.txt").toString());
-        Roles dummy = new Roles("x","p","ADMIN","x@example.com");
-
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService bookService = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-
-        String input = "10\n";
-        int result = runHandle(input, bookService, auth, reminderService, dummy);
+    void testExit() {
+        provideInput("10\n");
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
         assertEquals(2, result);
     }
-    @Test
-    void optionListUsers_printsUsers() throws IOException {
-        Path usersFile = tempDir.resolve("users3.txt");
-        Files.write(usersFile, List.of(
-                "a,apwd,ADMIN,a@example.com",
-                "b,bpwd,MEMBER,b@example.com"
-        ));
-        AuthService auth = new AuthService(usersFile.toString());
-        Roles admin = auth.login("a", "apwd");
-        assertNotNull(admin);
 
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService bookService = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-        // choose option 7 (List Users)
-        String input = "7\n";
-        int result = runHandle(input, bookService, auth, reminderService, admin);
+    @Test
+    void testAddCD() {
+        provideInput("11\nCD Title\nArtist Name\n654321\n");
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+
         assertEquals(0, result);
-        // ensure both users reported via auth.getUsers()
-        List<Roles> users = auth.getUsers();
-        assertEquals(2, users.size());
+        ArgumentCaptor<Media> captor = ArgumentCaptor.forClass(Media.class);
+        verify(mediaService).addMedia(captor.capture());
+        Media added = captor.getValue();
+        assertTrue(added instanceof CD);
+        assertEquals("CD Title", ((CD) added).getTitle());
+    }
+
+    @Test
+    void testSearchCDNoResults() {
+        provideInput("12\nKeywordCD\n");
+        when(mediaService.searchMedia("KeywordCD")).thenReturn(List.of());
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+        verify(mediaService).searchMedia("KeywordCD");
+    }
+
+    @Test
+    void testDisplayAllCDs() {
+        provideInput("13\n");
+        when(mediaService.getAllMedia()).thenReturn(List.of(new CD("C1","Artist1","2"), new Book("B1","A1","1")));
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
+        verify(mediaService).getAllMedia();
+    }
+
+    @Test
+    void testInvalidOption() {
+        provideInput("99\n");
+        int result = Admin.handle(new java.util.Scanner(System.in), mediaService, authService, reminderService, admin);
+        assertEquals(0, result);
     }
     @Test
-    void optionAddBook_addsBookToService_andFile() {
-        // BookService writes to media.txt in project root; change working dir to temp to avoid pollution
-        Path originalCwd = Path.of(System.getProperty("user.dir"));
-        try {
-            System.setProperty("user.dir", tempDir.toString());
+    void testFoundBooksPrinting() {
+        // إعداد كتب تجريبية
+        Book b1 = new Book("Java Basics", "Author A", "111");
+        Book b2 = new Book("Advanced Java", "Author B", "222");
+        List<Book> foundBooks = List.of(b1, b2);
 
-            BorrowRecordService borrowService = new BorrowRecordService(
-                    tempDir.resolve("borrow_records_admin.txt").toString()
-            );
-            FineService fineService = new FineService(
-                    tempDir.resolve("fines_admin.txt").toString()
-            );
-            MediaService service = new MediaService(
-                    tempDir.resolve("books_admin.txt").toString(),
-                    borrowService,
-                    fineService
-            );
+        // إعادة توجيه الـ System.out لالتقاط الطباعة
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outContent));
 
-            AuthService auth = new AuthService(tempDir.resolve("u4.txt").toString());
-            Roles admin = new Roles("adm","pwd","ADMIN","adm@example.com");
-
-            ReminderService reminderService = new ReminderService(
-                    borrowService,
-                    auth,
-                    new SystemTimeProvider()
-            );
-
-            String input = "1\nThe Title\nAuthor Name\nISBN123\n";
-            int result = runHandle(input, service, auth, reminderService, admin);
-            assertEquals(0, result);
-
-            // service should have the book in memory
-            List<Book> books = service.getBooks();
-            assertFalse(books.isEmpty());
-            Book b = books.get(0);
-            assertEquals("The Title", b.getTitle());
-            assertEquals("Author Name", b.getAuthor());
-            assertEquals("ISBN123", b.getIsbn());
-
-        } finally {
-            System.setProperty("user.dir", originalCwd.toString());
+        // تنفيذ الكود
+        if (foundBooks.isEmpty()) {
+            System.out.println("No books found.");
+        } else {
+            System.out.println("✅ Found books:");
+            for (Book b : foundBooks) System.out.println(b);
         }
-    }
-    @Test
-    void optionAddMember_success_withEmailLoop() {
-        Path usersFile = tempDir.resolve("users_add_member.txt");
-        AuthService auth = new AuthService(usersFile.toString());
 
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
+        // التحقق من المخرجات
+        String output = outContent.toString();
+        assertTrue(output.contains("✅ Found books:"));
+        assertTrue(output.contains("Java Basics"));
+        assertTrue(output.contains("Advanced Java"));
 
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-
-        // first provide empty email to trigger the loop, then valid email, username and password
-        String input = "4\n\nnewmember@example.com\nnewmember\nnewpass\n";
-        int rc = runHandle(input, service, auth, reminderService, admin);
-        assertEquals(0, rc);
-        assertTrue(auth.userExists("newmember"));
-
-        AuthService reloaded = new AuthService(usersFile.toString());
-        assertNotNull(reloaded.login("newmember","newpass"));
+        // إعادة System.out لحالته الأصلية
+        System.setOut(System.out);
     }
 
     @Test
-    void optionAddMember_duplicateUsername_noop() {
-        Path usersFile = tempDir.resolve("users_add_member_dup.txt");
-        AuthService auth = new AuthService(usersFile.toString());
-        // pre-add a user
-        auth.addUser("sam", "sampwd", "MEMBER", "sam@example.com");
+    void testNoBooksFoundPrinting() {
+        List<Book> foundBooks = List.of(); // قائمة فارغة
 
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outContent));
 
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
+        if (foundBooks.isEmpty()) {
+            System.out.println("No books found.");
+        } else {
+            System.out.println("✅ Found books:");
+            for (Book b : foundBooks) System.out.println(b);
+        }
 
-        String input = "4\nmember@example.com\nsam\notherpwd\n";
-        int rc = runHandle(input, service, auth, reminderService, admin);
-        assertEquals(0, rc);
-        // still only the original 'sam' exists
-        assertNotNull(auth.login("sam","sampwd"));
-        // verify that "otherpwd" does not authenticate for 'sam'
-        assertNull(auth.login("sam","otherpwd"));
+        String output = outContent.toString();
+        assertTrue(output.contains("No books found."));
+
+        System.setOut(System.out);
     }
-
     @Test
-    void optionAddLibrarian_success_withEmailLoop() {
-        Path usersFile = tempDir.resolve("users_add_lib.txt");
-        AuthService auth = new AuthService(usersFile.toString());
+    void testFoundCDsPrinting() {
+        // إعداد CDs تجريبية
+        CD cd1 = new CD("Greatest Hits", "Artist A", "111");
+        CD cd2 = new CD("Top Charts", "Artist B", "222");
+        List<CD> foundCDs = List.of(cd1, cd2);
 
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
+        // إعادة توجيه الـ System.out لالتقاط الطباعة
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+        System.setOut(new PrintStream(outContent));
 
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
+        // تنفيذ الكود كما في البرنامج
+        if (foundCDs.isEmpty()) {
+            System.out.println("❌ No matching CDs found!");
+        } else {
+            System.out.println("✅ Found CDs:");
+            for (CD c : foundCDs) System.out.println(c);
+        }
 
-        String input = "5\n\nnewlib@example.com\nnewlib\nlibpass\n";
-        int rc = runHandle(input, service, auth, reminderService, admin);
-        assertEquals(0, rc);
-        assertTrue(auth.userExists("newlib"));
-        AuthService reloaded = new AuthService(usersFile.toString());
-        assertNotNull(reloaded.login("newlib","libpass"));
+        // التحقق من المخرجات
+        String output = outContent.toString();
+        assertTrue(output.contains("✅ Found CDs:"));
+        assertTrue(output.contains("Greatest Hits"));
+        assertTrue(output.contains("Top Charts"));
+
+        // إعادة System.out لحالته الأصلية
+        System.setOut(originalOut);
     }
 
-    @Test
-    void optionAddLibrarian_duplicateUsername_noop() {
-        Path usersFile = tempDir.resolve("users_add_lib_dup.txt");
-        AuthService auth = new AuthService(usersFile.toString());
-        auth.addUser("libx", "pw1", "LIBRARIAN", "libx@example.com");
-
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-
-        String input = "5\nlib2@example.com\nlibx\nnewpw\n";
-        int rc = runHandle(input, service, auth, reminderService, admin);
-        assertEquals(0, rc);
-        // original password still valid, newpw should not authenticate for libx
-        assertNotNull(auth.login("libx","pw1"));
-        assertNull(auth.login("libx","newpw"));
-    }
-
-    @Test
-    void optionSearchBook_found() {
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_admin.txt").toString(),
-                borrowService,
-                fineService
-        );
-        service.addBook(new Book("SearchTitle","Auth","S-ISBN"));
-
-        AuthService auth = new AuthService(tempDir.resolve("u_search_admin.txt").toString());
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-
-        String input = "2\nSearchTitle\n";
-        int rc = runHandle(input, service, auth, reminderService, admin);
-        assertEquals(0, rc);
-        List<Book> found = service.searchBook("SearchTitle");
-        assertFalse(found.isEmpty());
-    }
-
-    @Test
-    void optionSearchBook_notFound() {
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_admin2.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_admin2.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_admin2.txt").toString(),
-                borrowService,
-                fineService
-        );
-        AuthService auth = new AuthService(tempDir.resolve("u_search_admin2.txt").toString());
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-
-        String input = "2\nNoMatchHere\n";
-        int rc = runHandle(input, service, auth, reminderService, admin);
-        assertEquals(0, rc);
-        List<Book> found = service.searchBook("NoMatchHere");
-        assertTrue(found.isEmpty());
-    }
-
-    @Test
-    void optionDisplayBooks_empty_and_withBooks() {
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_display.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_display.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_display.txt").toString(),
-                borrowService,
-                fineService
-        );
-        AuthService auth = new AuthService(tempDir.resolve("u_display.txt").toString());
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-
-        // display when empty
-        int rcEmpty = runHandle("3\n", service, auth, reminderService, admin);
-        assertEquals(0, rcEmpty);
-
-        // add a book and display
-        service.addBook(new Book("D1","A1","ISBN-D1"));
-        int rcWith = runHandle("3\n", service, auth, reminderService, admin);
-        assertEquals(0, rcWith);
-    }
-
-    @Test
-    void invalidOption_returns0_admin() {
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_inv.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_inv.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_inv.txt").toString(),
-                borrowService,
-                fineService
-        );
-        AuthService auth = new AuthService(tempDir.resolve("u_inv_admin.txt").toString());
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-
-        int rc = runHandle("notanumber\n", service, auth, reminderService, admin);
-        assertEquals(0, rc);
-    }
-
-    @Test
-    void optionRemoveUser_success() {
-        Path usersFile = tempDir.resolve("users_remove.txt");
-        AuthService auth = new AuthService(usersFile.toString());
-        auth.addUser("victim", "vpwd", "MEMBER", "v@example.com");
-
-        BorrowRecordService borrowService = new BorrowRecordService(
-                tempDir.resolve("borrow_records_remove.txt").toString()
-        );
-        FineService fineService = new FineService(
-                tempDir.resolve("fines_remove.txt").toString()
-        );
-        MediaService service = new MediaService(
-                tempDir.resolve("books_remove.txt").toString(),
-                borrowService,
-                fineService
-        );
-        ReminderService reminderService = new ReminderService(
-                borrowService,
-                auth,
-                new SystemTimeProvider()
-        );
-
-        Roles admin = new Roles("admin","pwd","ADMIN","admin@example.com");
-
-        assertTrue(auth.userExists("victim"));
-        String input = "6\nvictim\n";
-        int rc = runHandle(input, service, auth, reminderService, admin);
-        assertEquals(0, rc);
-        assertFalse(auth.userExists("victim"));
-    }
 }

@@ -1,61 +1,230 @@
 package edu.library.model;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.time.LocalDate;
 
-public class BookTest {
+import static org.junit.jupiter.api.Assertions.*;
+
+class BookTest {
+
+    private Book book;
 
     @Test
-    void testConstructorWithQuantity() {
-        Book book = new Book("Java Programming", "Alice", "ISBN123", 5);
+    public void testConstructorWithQuantity() {
+        Book b = new Book("AI", "Andrew", "444", 7);
 
+        assertEquals("AI", b.getTitle());
+        assertEquals("Andrew", b.getAuthor());
+        assertEquals("444", b.getIsbn());
+        assertEquals(7, b.getTotalCopies());
+        assertEquals(7, b.getAvailableCopies());
+        assertTrue(b.isAvailable());
+        assertNull(b.getDueDate());
+    }
+
+    @Test
+    public void testConstructorWithAvailabilityAndDueDate() {
+        LocalDate d = LocalDate.of(2026, 1, 15);
+
+        Book b = new Book("Networks", "Kurose", "555", false, d, 4);
+
+        assertEquals("Networks", b.getTitle());
+        assertEquals("Kurose", b.getAuthor());
+        assertEquals("555", b.getIsbn());
+        assertEquals(4, b.getTotalCopies());
+
+        // available = false => availableCopies = 0
+        assertEquals(0, b.getAvailableCopies());
+        assertFalse(b.isAvailable());
+
+        assertEquals(d, b.getDueDate());
+    }
+
+    @Test
+    public void testConstructor1() {
+        Book b = new Book("Java", "James", "111");
+
+        assertEquals("Java", b.getTitle());
+        assertEquals("James", b.getAuthor());
+        assertEquals("111", b.getIsbn());
+        assertEquals(1, b.getTotalCopies());
+        assertEquals(1, b.getAvailableCopies());
+    }
+
+    @Test
+    public void testConstructor2() {
+        Book b = new Book("OOP", "Robert", "222", 5);
+
+        assertEquals("OOP", b.getTitle());
+        assertEquals("Robert", b.getAuthor());
+        assertEquals("222", b.getIsbn());
+        assertEquals(5, b.getTotalCopies());
+        assertEquals(5, b.getAvailableCopies());
+    }
+
+    @Test
+    public void testConstructor3() {
+        LocalDate date = LocalDate.of(2025, 12, 30);
+        Book b = new Book("DSA", "Mark", "333", false, date, 3);
+
+        assertEquals("DSA", b.getTitle());
+        assertEquals("Mark", b.getAuthor());
+        assertEquals("333", b.getIsbn());
+        assertEquals(3, b.getTotalCopies());
+        assertEquals(0, b.getAvailableCopies());   // بما أنه available = false
+
+        assertEquals(date, b.getDueDate());
+        assertFalse(b.isAvailable());
+    }
+
+    @BeforeEach
+    void setUp() {
+        book = new Book("Java Programming", "John Doe", "ISBN123", 5);
+    }
+
+    @Test
+    void testConstructorAndGetters() {
         assertEquals("Java Programming", book.getTitle());
-        assertEquals("Alice", book.getAuthor());
+        assertEquals("John Doe", book.getAuthor());
         assertEquals("ISBN123", book.getIsbn());
         assertEquals(5, book.getTotalCopies());
         assertEquals(5, book.getAvailableCopies());
     }
 
     @Test
-    void testConstructorWithAvailabilityAndDueDate() {
-        LocalDate due = LocalDate.of(2025, 1, 1);
-
-        Book book = new Book("Data Structures", "Bob", "ISBN999",
-                true, due, 3);
-
-        assertEquals("Data Structures", book.getTitle());
-        assertEquals("Bob", book.getAuthor());
-        assertEquals("ISBN999", book.getIsbn());
+    void testAvailableAndBorrowReturn() {
         assertTrue(book.isAvailable());
-        assertEquals(due, book.getDueDate());
-        assertEquals(3, book.getTotalCopies());
-    }
 
-    @Test
-    void testBorrowDurationDays() {
-        Book book = new Book("Test", "A", "123");
-        assertEquals(28, book.getBorrowDurationDays(),
-                "Borrow duration for books must be 28 days");
-    }
-
-    @Test
-    void testDailyFine() {
-        Book book = new Book("Test", "A", "123");
-        assertEquals(10, book.getDailyFine(),
-                "Daily fine for books must be 10");
-    }
-
-    @Test
-    void testAvailabilityAfterBorrowAndReturn() {
-        Book book = new Book("Test", "A", "123", 2);
-
-        // Borrow one copy
         book.borrowOne();
-        assertEquals(1, book.getAvailableCopies());
+        assertEquals(4, book.getAvailableCopies());
+        assertTrue(book.isAvailable());
 
-        // Return one copy
+        book.borrowOne();
+        book.borrowOne();
+        book.borrowOne();
+        book.borrowOne();
+        assertEquals(0, book.getAvailableCopies());
+        assertFalse(book.isAvailable());
+
+        // Returning books
         book.returnOne();
-        assertEquals(2, book.getAvailableCopies());
+        assertEquals(1, book.getAvailableCopies());
+        assertTrue(book.isAvailable());
+    }
+
+    @Test
+    void testSetAvailableCopiesAndTotalCopies() {
+        book.setTotalCopies(10);
+        assertEquals(10, book.getTotalCopies());
+
+        book.setAvailableCopies(7);
+        assertEquals(7, book.getAvailableCopies());
+
+        // Available copies cannot exceed total copies
+        book.setAvailableCopies(15);
+        assertEquals(10, book.getAvailableCopies());
+    }
+
+
+    @Test
+    void testDueDateAndOverdue() {
+        assertNull(book.getDueDate());
+        assertFalse(book.isOverdue());
+
+        LocalDate pastDate = LocalDate.now().minusDays(5);
+        book.setDueDate(pastDate);
+        book.setAvailable(false); // borrowed
+        // بعد التعديل: إذا availableCopies=0 => isOverdue = true
+        book.setAvailableCopies(0);
+        assertTrue(book.isOverdue());
+
+        // Return one copy => availableCopies > 0 => not overdue
+        book.returnOne();
+        assertFalse(book.isOverdue());
+    }
+
+
+    @Test
+    void testAbstractMethods() {
+        assertEquals(28, book.getBorrowDurationDays());
+        assertEquals(10, book.getDailyFine());
+        assertEquals(28, book.getBorrowDuration());
+    }
+    @Test
+    public void testConstructorAvailableTotal() {
+        // Arrange
+        String title = "Clean Code";
+        String author = "Robert Martin";
+        String isbn = "111-222";
+        int available = 3;
+        int total = 5;
+
+        // Act
+        Book book = new Book(title, author, isbn, available, total);
+
+        // Assert
+        assertEquals(title, book.getTitle());
+        assertEquals(author, book.getAuthor());
+        assertEquals(isbn, book.getIsbn());
+
+        // أهم سطرين → هدول اللي كانوا يعطوك Error
+        assertEquals(available, book.getAvailableCopies());
+        assertEquals(total, book.getTotalCopies());
+    }
+
+
+    @Test
+    public void testAvailableCopiesNotNegative() {
+        Book b = new Book("X", "Y", "Z", 3);
+
+        b.setAvailableCopies(-5);
+        assertEquals(0, b.getAvailableCopies());
+    }
+    @Test
+    public void testNotOverdueWhenAvailableCopiesAboveZero() {
+        Book b = new Book("Test", "A", "B", 3);
+        b.setDueDate(LocalDate.now().minusDays(10));
+        b.setAvailableCopies(1); // يوجد نسخة متاحة إذًا ليس متأخراً
+
+        assertFalse(b.isOverdue());
+    }
+
+    @Test
+    public void testToStringFull() {
+        Book b = new Book("TT", "AA", "999");
+        String s = b.toString();
+
+        assertTrue(s.contains("TT"));
+        assertTrue(s.contains("AA"));
+        assertTrue(s.contains("999"));
+    }
+
+
+    @Test
+    public void testBorrowDurationDaysDirect() {
+        Book b = new Book("Math", "Tom", "666");
+        assertEquals(28, b.getBorrowDurationDays(), "Book borrow duration must be 28 days");
+    }
+
+    @Test
+    public void testDailyFineDirect() {
+        Book b = new Book("Physics", "Albert", "777");
+        assertEquals(10, b.getDailyFine(), "Book daily fine must be 10");
+    }
+
+    // ⭐ دالة مدة الإعارة (28 يوم)
+    @Test
+    public void testBorrowDurationDays() {
+        Book b = new Book("Java", "James", "111");
+        assertEquals(28, b.getBorrowDurationDays());
+    }
+
+    // ⭐ دالة الغرامة اليومية (10 شيكل)
+    @Test
+    public void testDailyFine() {
+        Book b = new Book("Java", "James", "111");
+        assertEquals(10, b.getDailyFine());
     }
 }
