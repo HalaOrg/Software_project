@@ -196,8 +196,14 @@ public class MediaService {
 
         if (returnDate.isAfter(originalDue)) {
             int overdueDays = (int) ChronoUnit.DAYS.between(originalDue, returnDate);
-            int fine = overdueDays * m.getDailyFine();
-            fineService.addFine(username, fine);
+            int ratePerDay = (m instanceof Book) ? 10 : (m instanceof CD) ? 20 : 0;
+            int fineAmount = overdueDays * ratePerDay;
+            int currentBalance = fineService.getBalance(username);
+
+            if (fineAmount > currentBalance) {
+                int diff = fineAmount - currentBalance;
+                fineService.addFine(username, diff);
+            }
         }
 
         return true;
@@ -365,16 +371,16 @@ public class MediaService {
                     today
             );
 
-            String mediaTypeKey;
+            int ratePerDay;
             if (media instanceof Book) {
-                mediaTypeKey = FineCalculator.MEDIA_BOOK;   // book rate (10/day)
+                ratePerDay = 10;   // book rate (10/day)
             } else if (media instanceof CD) {
-                mediaTypeKey = FineCalculator.MEDIA_CD;     // CD rate (20/day)
+                ratePerDay = 20;   // CD rate (20/day)
             } else {
                 continue;
             }
 
-            int newFineAmount = fineCalculator.calculate(mediaTypeKey, overdueDays);
+            int newFineAmount = overdueDays * ratePerDay;
 
             String username = record.getUsername();
             recalculatedFines.merge(username, newFineAmount, Integer::sum);
