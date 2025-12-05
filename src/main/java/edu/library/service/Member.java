@@ -14,7 +14,6 @@ public class Member {
 
     public static String fineFilePath = "fines.txt";
 
-
     public static int handle(Scanner input, MediaService service, AuthService auth, Roles user) {
         System.out.println("\n--- Member Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
         System.out.println("1. Search Book");
@@ -53,7 +52,7 @@ public class Member {
             case 9 -> returnCD(input, service, user);
             case 10 -> displayAllCDs(service);
             case 11 -> viewRemainingCDs(service, user);
-            case 12 -> { // Logout
+            case 12 -> {
                 if (auth.logout()) {
                     System.out.println("Logged out successfully.");
                     return 1;
@@ -102,7 +101,7 @@ public class Member {
         }
 
         if (service.borrowBook(bookToBorrow, user.getUsername())) {
-            System.out.println("Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
+            System.out.println(" Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
         } else {
             System.out.println("Could not borrow book.");
         }
@@ -183,7 +182,6 @@ public class Member {
 
         if (!anyBook) System.out.println("You have no active borrowed books.");
     }
-
 
     private static int searchCD(Scanner input, MediaService service) {
         System.out.print("Enter title/author/ISBN to search: ");
@@ -292,7 +290,7 @@ public class Member {
 
         for (BorrowRecord record : activeBorrows) {
             CD cd = service.findCDByIsbn(record.getIsbn());
-            if (cd != null) {
+            if (cd != null) { // فقط CDs سيتم التعامل معها
                 anyCD = true;
                 long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
                 if (daysRemaining < 0) {
@@ -307,7 +305,6 @@ public class Member {
             System.out.println("You have no active borrowed CDs.");
         }
     }
-
 
     public static int getOutstandingFineFromFile(String username) {
         File file = new File(fineFilePath);

@@ -4,7 +4,7 @@ import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 import edu.library.notification.EmailNotifier;
 import edu.library.notification.EmailServer;
-import edu.library.notification.Observer;        // ← المهم!
+import edu.library.notification.Observer;
 import edu.library.notification.SmtpEmailServer;
 import edu.library.time.TimeProvider;
 
@@ -71,7 +71,7 @@ public class ReminderService {
             return;
         }
 
-        String message = "You have " + overdueCount + " overdue item(s).";
+        String message = "You have " + overdueCount + " overdue book(s).";
 
         if (observers.isEmpty()) {
             observers.add(new EmailNotifier(new SmtpEmailServer()));

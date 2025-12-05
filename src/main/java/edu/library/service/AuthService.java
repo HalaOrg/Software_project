@@ -32,6 +32,7 @@ public class AuthService {
     }
 
 
+
     public Roles login(String username, String password) {
         if (username == null || password == null) return null;
 
@@ -46,6 +47,8 @@ public class AuthService {
         }
         return null;
     }
+
+
 
     public Roles addUser(String username, String password, String roleName, String email) {
         if (username == null || password == null || roleName == null || email == null)
@@ -145,7 +148,7 @@ public class AuthService {
 
         if (!file.exists()) {
             try {
-                file.getParentFile().mkdirs(); // إنشاء المجلدات إذا لم توجد
+                file.getParentFile().mkdirs();
                 file.createNewFile();
             } catch (IOException e) {
                 System.out.println("Error creating users file: " + e.getMessage());

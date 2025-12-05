@@ -37,6 +37,7 @@ public abstract class Media {
     }
 
 
+
     public String getTitle() { return title; }
     public String getAuthor() { return author; }
     public String getIsbn() { return isbn; }
@@ -85,7 +86,6 @@ public abstract class Media {
     }
 
     public abstract int getBorrowDurationDays();
-
 
     public abstract int getDailyFine();
 

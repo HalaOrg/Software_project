@@ -29,7 +29,7 @@ public class Main {
                 new FineCalculator()
         );
 
-        service.updateFinesOnStartup();
+     //   service.updateFinesOnStartup();
 
 
         AuthService auth = new AuthService(fineService);;
