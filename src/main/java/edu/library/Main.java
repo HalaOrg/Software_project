@@ -1,4 +1,4 @@
-/**
+
 package edu.library;
 import edu.library.fine.FineCalculator;
 import edu.library.model.Book;
@@ -30,7 +30,7 @@ public class Main {
                 new FineCalculator()
         );
 
-
+        service.updateFinesOnStartup();
 
         AuthService auth = new AuthService(fineService);;
         ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
@@ -141,4 +141,3 @@ public class Main {
 
 
 }
-*/

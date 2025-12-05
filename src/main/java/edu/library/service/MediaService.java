@@ -154,14 +154,8 @@ public class MediaService {
             return false;
         }
 
-        Media managedMedia = findByIsbn(m.getIsbn());
-        if (managedMedia == null) {
-            System.out.println("Item not available.");
-            return false;
-        }
-
-        if (managedMedia.getAvailableCopies() <= 0) {
-            managedMedia.setAvailable(false);
+        if (m.getAvailableCopies() <= 0) {
+            m.setAvailable(false);
             System.out.println("Item not available.");
             return false;
         }
@@ -171,22 +165,16 @@ public class MediaService {
             return false;
         }
 
-        if (hasOverdueBorrow(username)) {
-            System.out.println("Resolve overdue items before borrowing.");
-            return false;
-        }
+        LocalDate dueDate = timeProvider.today().plusDays(m.getBorrowDurationDays());
 
-        LocalDate dueDate = timeProvider.today().plusDays(managedMedia.getBorrowDurationDays());
+        m.borrowOne();
 
-        managedMedia.borrowOne();
-        if (managedMedia.getAvailableCopies() == 0) {
-            managedMedia.setAvailable(false);
-        }
+        m.setAvailable(m.getAvailableCopies() > 0);
 
 
-        managedMedia.setDueDate(dueDate);
+        m.setDueDate(dueDate);
 
-        borrowRecordService.recordBorrow(username, managedMedia.getIsbn(), dueDate);
+        borrowRecordService.recordBorrow(username, m.getIsbn(), dueDate);
 
         saveAllMediaToFile();
         return true;
@@ -263,14 +251,6 @@ public class MediaService {
         List<CD> cds = new ArrayList<>();
         for (Media m : items) if (m instanceof CD) cds.add((CD) m);
         return cds;
-    }
-
-    private boolean hasOverdueBorrow(String username) {
-        if (username == null) return false;
-
-        LocalDate today = timeProvider.today();
-        return borrowRecordService.getActiveBorrowRecordsForUser(username).stream()
-                .anyMatch(record -> record.getDueDate() != null && today.isAfter(record.getDueDate()));
     }
 
     public List<Book> searchBook(String keyword) {
@@ -360,31 +340,45 @@ public class MediaService {
             );
         }
     }
-
-    //update fines for overdue items on startup
     public void updateFinesOnStartup() {
+
+        LocalDate today = timeProvider.today();
 
         for (BorrowRecord record : borrowRecordService.getRecords()) {
 
-            if (!record.isReturned()
-                    && record.getDueDate() != null
-                    && timeProvider.today().isAfter(record.getDueDate())) {
+            if (record.isReturned()
+                    || record.getDueDate() == null
+                    || !today.isAfter(record.getDueDate())) {
+                continue;
+            }
 
-                int overdueDays = (int) ChronoUnit.DAYS.between(
-                        record.getDueDate(),
-                        timeProvider.today()
-                );
+            int overdueDays = (int) ChronoUnit.DAYS.between(
+                    record.getDueDate(),
+                    today
+            );
 
-                int newFineAmount = fineCalculator.calculate(FineCalculator.MEDIA_BOOK, overdueDays);
+            Media media = findByIsbn(record.getIsbn());
+            if (media == null) {
+                continue;
+            }
 
-                String username = record.getUsername();
+            String mediaTypeKey;
+            if (media instanceof Book) {
+                mediaTypeKey = FineCalculator.MEDIA_BOOK;   // 10 NIS لليوم (حسب ستراتجي الكتب)
+            } else if (media instanceof CD) {
+                mediaTypeKey = FineCalculator.MEDIA_CD;     // 20 NIS لليوم (حسب ستراتجي الـ CD)
+            } else {
+                continue;
+            }
 
-                int currentBalance = fineService.getBalance(username);
+            int newFineAmount = fineCalculator.calculate(mediaTypeKey, overdueDays);
 
-                if (newFineAmount > currentBalance) {
-                    int diff = newFineAmount - currentBalance;
-                    fineService.addFine(username, diff);
-                }
+            String username = record.getUsername();
+            int currentBalance = fineService.getBalance(username);
+
+            if (newFineAmount > currentBalance) {
+                int diff = newFineAmount - currentBalance;
+                fineService.addFine(username, diff);
             }
         }
     }
