@@ -69,7 +69,6 @@ public class BorrowRecordService {
             }
         }
 
-
         BorrowRecord fallback = new BorrowRecord(username, isbn, returnDate, true, returnDate);
         records.add(fallback);
         saveAll();
@@ -155,7 +154,6 @@ public class BorrowRecordService {
         }
         return false;
     }
-
 
     public List<BorrowRecord> getAllRecords() {
         return new ArrayList<>(records);
