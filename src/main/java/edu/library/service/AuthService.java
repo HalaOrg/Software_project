@@ -31,9 +31,6 @@ public class AuthService {
         loadUsersFromFile();
     }
 
-    // -----------------------------------------------------
-    //                     LOGIN
-    // -----------------------------------------------------
 
     public Roles login(String username, String password) {
         if (username == null || password == null) return null;
@@ -49,10 +46,6 @@ public class AuthService {
         }
         return null;
     }
-
-    // -----------------------------------------------------
-    //                     ADD USER
-    // -----------------------------------------------------
 
     public Roles addUser(String username, String password, String roleName, String email) {
         if (username == null || password == null || roleName == null || email == null)
@@ -70,9 +63,7 @@ public class AuthService {
         return addUser(username, password, roleName, "");
     }
 
-    // -----------------------------------------------------
-    //                 REMOVE USER (simple)
-    // -----------------------------------------------------
+
 
     public boolean removeUser(String username) {
         if (username == null) return false;
@@ -94,9 +85,7 @@ public class AuthService {
         return true;
     }
 
-    // -----------------------------------------------------
-    //          REMOVE USER with restrictions (admin)
-    // -----------------------------------------------------
+
 
     public boolean removeUserWithRestrictions(String username, BorrowRecordService borrowRecordService) {
 
@@ -115,9 +104,7 @@ public class AuthService {
         return removeUser(username);
     }
 
-    // -----------------------------------------------------
-    //                     HELPERS
-    // -----------------------------------------------------
+
 
     public boolean userExists(String username) {
         if (username == null) return false;
@@ -144,9 +131,7 @@ public class AuthService {
         return new ArrayList<>(users);
     }
 
-    // -----------------------------------------------------
-    //                  FILE HANDLING
-    // -----------------------------------------------------
+
 
     private void persistOutstandingFines(Roles user) {
         if (fineService == null) return;
@@ -175,7 +160,7 @@ public class AuthService {
                 if (line.trim().isEmpty()) continue;
 
                 String[] p = line.split(",");
-                if (p.length < 3) continue; // <-- هذا هو الشرط المهم لتجاهل السطور المعيبة
+                if (p.length < 3) continue;
 
                 String username = p[0].trim();
                 String password = p[1].trim();

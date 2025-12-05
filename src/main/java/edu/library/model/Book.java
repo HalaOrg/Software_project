@@ -21,11 +21,11 @@ public class Book extends Media {
 
     @Override
     public int getBorrowDurationDays() {
-        return 28; // مدة الكتاب
+        return 28;
     }
 
     @Override
     public int getDailyFine() {
-        return 10; // غرامة الكتاب
+        return 10;
     }
 }

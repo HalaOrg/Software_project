@@ -12,8 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +29,6 @@ class AuthServiceTest {
         fineService = mock(FineService.class);
         authService = new AuthService(fineService);
 
-        // نضيف مستخدمين للاختبار
         authService.addUser("admin", "adminpwd", "ADMIN", "admin@example.com");
         authService.addUser("member1", "pwd1", "MEMBER", "member1@example.com");
         authService.addUser("member2", "pwd2", "MEMBER", "member2@example.com");
@@ -41,30 +38,24 @@ class AuthServiceTest {
 
     @Test
     void testRemoveUserWithRestrictions() {
-        // تسجيل دخول كـ admin
         authService.login("admin", "adminpwd");
 
-        // 1️⃣ حالة: currentUser = null أو ليس admin
         authService.logout();
         assertFalse(authService.removeUserWithRestrictions("member1", mockBorrow));
         authService.login("admin", "adminpwd");
 
-        // 2️⃣ حالة: username = null أو نفس admin
         assertFalse(authService.removeUserWithRestrictions(null, mockBorrow));
         assertFalse(authService.removeUserWithRestrictions("admin", mockBorrow));
 
-        // 3️⃣ حالة: المستخدم عنده balance > 0
         when(fineService.getBalance("member1")).thenReturn(50);
         assertFalse(authService.removeUserWithRestrictions("member1", mockBorrow));
 
-        // 4️⃣ حالة: المستخدم عنده borrow records active
         when(fineService.getBalance("member2")).thenReturn(0);
         BorrowRecord fakeRecord = mock(BorrowRecord.class);
         when(mockBorrow.getActiveBorrowRecordsForUser("member2"))
                 .thenReturn(Collections.singletonList(fakeRecord));
         assertFalse(authService.removeUserWithRestrictions("member2", mockBorrow));
 
-        // 5️⃣ حالة: كل الشروط صح → يجب أن يتم الحذف
         authService.addUser("member3", "pwd3", "MEMBER", "member3@example.com");
         when(fineService.getBalance("member3")).thenReturn(0);
         when(mockBorrow.getActiveBorrowRecordsForUser("member3"))
@@ -76,7 +67,6 @@ class AuthServiceTest {
 
     @Test
     void testDefaultConstructor() {
-        // هذا سيستخدم resolveDefault("users.txt") و FineService افتراضي
         AuthService defaultAuth = new AuthService();
         assertNotNull(defaultAuth);
     }
@@ -89,7 +79,6 @@ class AuthServiceTest {
 
     @Test
     void testAddUserOverload() {
-        // نختبر الدالة اللي ترجع overload
         Roles role = authService.addUser("user1", "pass1", "MEMBER", "user1@example.com");
         assertNotNull(role);
 
@@ -100,7 +89,6 @@ class AuthServiceTest {
 
     @Test
     void testResolveDefaultViaConstructor() throws IOException {
-        // مجرد اختبار أنه constructor ينجح ويقوم بإنشاء الملف حتى لو لم يكن موجود
         Path tempFile = tempDir.resolve("users.txt");
         assertFalse(Files.exists(tempFile));
         AuthService auth = new AuthService(tempFile.toString());
@@ -109,11 +97,9 @@ class AuthServiceTest {
 
     @Test
     void testAddUserAndCatchIOExceptions() throws IOException {
-        // ملف مؤقت مع path غير صالح → سيغطي catch(IOException) عند إنشاء أو حفظ الملف
         Path badPath = tempDir.resolve("invalid_dir/users.txt");
         AuthService auth = new AuthService(badPath.toString());
 
-        // addUser يجب ألا يرمي exception
         assertDoesNotThrow(() -> auth.addUser("userX", "pwdX", "MEMBER"));
     }
 
@@ -155,7 +141,7 @@ class AuthServiceTest {
         assertTrue(auth.logout());
         assertNull(auth.getCurrentAdmin());
         assertNull(auth.getCurrentUser());
-        assertFalse(auth.logout()); // logout ثانية بدون مستخدم
+        assertFalse(auth.logout());
     }
 
 
@@ -474,32 +460,27 @@ class AuthServiceTest {
     void loadUsers_skipsMalformedLines() throws IOException {
         Path usersFile = tempDir.resolve("users.txt");
         Files.write(usersFile, Arrays.asList(
-                "shortline", // معيب
-                "good,user,MEMBER,good@example.com" // صحيح
+                "shortline",
+                "good,user,MEMBER,good@example.com"
         ));
 
         AuthService auth = new AuthService(usersFile.toString());
-        assertFalse(auth.userExists("shortline")); // يجب أن يكون false
-        assertTrue(auth.userExists("good"));       // يجب أن يكون true
+        assertFalse(auth.userExists("shortline"));
+        assertTrue(auth.userExists("good"));
     }
 
     @Test
     void testIOExceptionDuringAuthServiceInit() {
-        // path غير صالح عمداً → سيؤدي إلى IOException عند إنشاء الملف
         String badPath = "Z:\\invalid_path\\users.txt";
 
-        // لا يجب أن يرمي استثناء عند init
         assertDoesNotThrow(() -> new AuthService(badPath));
     }
     @Test
     void testIOExceptionInSaveUsersToFile() {
-        // مسار مستحيل الكتابة إليه → يجبر FileWriter على رمي IOException
         String badPath = "/invalid/path/users.txt";
 
-        // إنشاء AuthService باستخدام المسار غير الصالح
         AuthService auth = new AuthService(badPath, new FineService());
 
-        // addUser يجب أن يدخل catch ولا يرمي Exception
         assertDoesNotThrow(() ->
                 auth.addUser("userX", "pwX", "MEMBER")
         );

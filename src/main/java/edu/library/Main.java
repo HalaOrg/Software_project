@@ -31,8 +31,6 @@ public class Main {
         );
 
 
-       // service.loadBooksFromFile();
-       // service.updateFinesOnStartup();
 
         AuthService auth = new AuthService(fineService);;
         ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
@@ -95,11 +93,11 @@ public class Main {
                 String password = input.nextLine();
                 Roles user = auth.login(username, password);
                 if (user == null) {
-                    System.out.println("❌ Invalid credentials.");
+                    System.out.println("Invalid credentials.");
                     continue;
                 }
 
-                System.out.println("✅ Logged in as: " + user.getUsername() + " (" + user.getRoleName() + ")");
+                System.out.println("Logged in as: " + user.getUsername() + " (" + user.getRoleName() + ")");
                 reminderService.sendReminderForUser(user);
 
                 boolean sessionActive = true;
@@ -116,17 +114,17 @@ public class Main {
                         result = Member.handle(input, service, auth, user);
                     }
 
-                    if (result == 1) { // logout
+                    if (result == 1) {
                         sessionActive = false;
-                    } else if (result == 2) { // exit app
-                        System.out.println("👋 Exiting...");
+                    } else if (result == 2) {
+                        System.out.println(" Exiting...");
                         return;
                     }
                 }
             }
 
             if (choice == 3) {
-                System.out.println("👋 Exiting...");
+                System.out.println("Exiting...");
                 return;
             }
         }
@@ -134,7 +132,7 @@ public class Main {
 
     private static Book findBookByIsbn(MediaService service, String isbn) {
         if (isbn == null) return null;
-        for (Book b : service.getBooks()) {   // <- الآن صالحة بعد إضافة getBooks()
+        for (Book b : service.getBooks()) {
             if (isbn.equalsIgnoreCase(b.getIsbn())) return b;
         }
         return null;

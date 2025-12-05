@@ -25,9 +25,7 @@ public class BorrowRecordService {
         loadRecords();
     }
 
-    // -------------------------------------------------
-    //      Existing methods
-    // -------------------------------------------------
+
     public List<BorrowRecord> getRecords() {
         return new ArrayList<>(records);
     }
@@ -71,15 +69,13 @@ public class BorrowRecordService {
             }
         }
 
-        // fallback case
+
         BorrowRecord fallback = new BorrowRecord(username, isbn, returnDate, true, returnDate);
         records.add(fallback);
         saveAll();
     }
 
-    // -------------------------------------------------
-    //      Load & Save
-    // -------------------------------------------------
+
     void loadRecords() {
         records.clear();
         File file = new File(filePath);
@@ -150,9 +146,7 @@ public class BorrowRecordService {
         return new File(base, filename).getPath();
     }
 
-    // -----------------------------------------------------------
-    //      Helper Methods
-    // -----------------------------------------------------------
+
     public boolean hasActiveBorrows(String username) {
         for (BorrowRecord record : records) {
             if (!record.isReturned() && record.getUsername().equals(username)) {
@@ -162,7 +156,7 @@ public class BorrowRecordService {
         return false;
     }
 
-    // ✅ New method to fix Librarian.java error
+
     public List<BorrowRecord> getAllRecords() {
         return new ArrayList<>(records);
     }
@@ -178,7 +172,7 @@ public class BorrowRecordService {
             }
         }
 
-        // fallback
+
         BorrowRecord fallback = new BorrowRecord(username, isbn, LocalDate.now(), true, LocalDate.now());
         records.add(fallback);
         saveAll();

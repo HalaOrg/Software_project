@@ -12,13 +12,9 @@ import edu.library.model.Roles;
 
 public class Member {
 
-    // متغير عام لمسار ملف الغرامات ليصبح قابل للتغيير من التست
     public static String fineFilePath = "fines.txt";
 
-    /**
-     * Handle member menu actions.
-     * return 0 = stay logged in, 1 = logout, 2 = exit app
-     */
+
     public static int handle(Scanner input, MediaService service, AuthService auth, Roles user) {
         System.out.println("\n--- Member Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
         System.out.println("1. Search Book");
@@ -66,7 +62,7 @@ public class Member {
                     return 0;
                 }
             }
-            case 13 -> { // Exit
+            case 13 -> {
                 System.out.println("Exiting...");
                 return 2;
             }
@@ -78,9 +74,7 @@ public class Member {
         return 0;
     }
 
-    // ------------------------------
-    // Books
-    // ------------------------------
+
     private static int searchBook(Scanner input, MediaService service) {
         System.out.print("Enter title/author/ISBN to search: ");
         String keyword = input.nextLine();
@@ -108,7 +102,7 @@ public class Member {
         }
 
         if (service.borrowBook(bookToBorrow, user.getUsername())) {
-            System.out.println("✅ Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
+            System.out.println("Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
         } else {
             System.out.println("Could not borrow book.");
         }
@@ -190,9 +184,7 @@ public class Member {
         if (!anyBook) System.out.println("You have no active borrowed books.");
     }
 
-    // ------------------------------
-    // CDs
-    // ------------------------------
+
     private static int searchCD(Scanner input, MediaService service) {
         System.out.print("Enter title/author/ISBN to search: ");
         String keyword = input.nextLine();
@@ -300,7 +292,7 @@ public class Member {
 
         for (BorrowRecord record : activeBorrows) {
             CD cd = service.findCDByIsbn(record.getIsbn());
-            if (cd != null) { // فقط CDs سيتم التعامل معها
+            if (cd != null) {
                 anyCD = true;
                 long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
                 if (daysRemaining < 0) {
@@ -316,13 +308,11 @@ public class Member {
         }
     }
 
-    // ------------------------------
-    // File-based fines
-    // ------------------------------
+
     public static int getOutstandingFineFromFile(String username) {
         File file = new File(fineFilePath);
 
-        if (!file.exists()) return 0; // إذا الملف غير موجود، لا غرامة
+        if (!file.exists()) return 0;
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
@@ -357,7 +347,7 @@ public class Member {
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts[0].equalsIgnoreCase(username)) {
-                    line = username + "," + newFine; // تحديث الغرامة الجديدة
+                    line = username + "," + newFine;
                     userFound = true;
                 }
                 lines.add(line);

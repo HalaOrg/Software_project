@@ -108,7 +108,6 @@ class BookTest {
         assertEquals(0, book.getAvailableCopies());
         assertFalse(book.isAvailable());
 
-        // Returning books
         book.returnOne();
         assertEquals(1, book.getAvailableCopies());
         assertTrue(book.isAvailable());
@@ -122,7 +121,6 @@ class BookTest {
         book.setAvailableCopies(7);
         assertEquals(7, book.getAvailableCopies());
 
-        // Available copies cannot exceed total copies
         book.setAvailableCopies(15);
         assertEquals(10, book.getAvailableCopies());
     }
@@ -135,12 +133,10 @@ class BookTest {
 
         LocalDate pastDate = LocalDate.now().minusDays(5);
         book.setDueDate(pastDate);
-        book.setAvailable(false); // borrowed
-        // بعد التعديل: إذا availableCopies=0 => isOverdue = true
+        book.setAvailable(false);
         book.setAvailableCopies(0);
         assertTrue(book.isOverdue());
 
-        // Return one copy => availableCopies > 0 => not overdue
         book.returnOne();
         assertFalse(book.isOverdue());
     }
@@ -154,22 +150,21 @@ class BookTest {
     }
     @Test
     public void testConstructorAvailableTotal() {
-        // Arrange
+
         String title = "Clean Code";
         String author = "Robert Martin";
         String isbn = "111-222";
         int available = 3;
         int total = 5;
 
-        // Act
+
         Book book = new Book(title, author, isbn, available, total);
 
-        // Assert
+
         assertEquals(title, book.getTitle());
         assertEquals(author, book.getAuthor());
         assertEquals(isbn, book.getIsbn());
 
-        // أهم سطرين → هدول اللي كانوا يعطوك Error
         assertEquals(available, book.getAvailableCopies());
         assertEquals(total, book.getTotalCopies());
     }
@@ -186,7 +181,7 @@ class BookTest {
     public void testNotOverdueWhenAvailableCopiesAboveZero() {
         Book b = new Book("Test", "A", "B", 3);
         b.setDueDate(LocalDate.now().minusDays(10));
-        b.setAvailableCopies(1); // يوجد نسخة متاحة إذًا ليس متأخراً
+        b.setAvailableCopies(1);
 
         assertFalse(b.isOverdue());
     }
@@ -214,14 +209,12 @@ class BookTest {
         assertEquals(10, b.getDailyFine(), "Book daily fine must be 10");
     }
 
-    // ⭐ دالة مدة الإعارة (28 يوم)
     @Test
     public void testBorrowDurationDays() {
         Book b = new Book("Java", "James", "111");
         assertEquals(28, b.getBorrowDurationDays());
     }
 
-    // ⭐ دالة الغرامة اليومية (10 شيكل)
     @Test
     public void testDailyFine() {
         Book b = new Book("Java", "James", "111");

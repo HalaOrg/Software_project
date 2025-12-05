@@ -1,8 +1,5 @@
 package edu.library.fine;
 
-/**
- * Fine calculation strategy for journals.
- */
 public class JournalFineStrategy implements FineStrategy {
     private static final int RATE_PER_DAY = 15;
 

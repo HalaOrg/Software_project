@@ -28,7 +28,6 @@ class LibrarianTest {
 
     @Test
     void testHandle_AddMedia_BookAndCD() {
-        // Book
         Scanner scannerBook = new Scanner("""
                 1
                 Book
@@ -43,9 +42,9 @@ class LibrarianTest {
         ArgumentCaptor<Media> captorBook = ArgumentCaptor.forClass(Media.class);
         verify(mediaService).addMedia(captorBook.capture());
         assertEquals("MyBook", captorBook.getValue().getTitle());
-        assertEquals(0, resultBook); // بعد الإضافة تبقى session مفتوح
+        assertEquals(0, resultBook);
 
-        // CD
+
         Scanner scannerCD = new Scanner("""
                 1
                 CD
@@ -67,7 +66,6 @@ class LibrarianTest {
         when(mediaService.searchMedia("Mock")).thenReturn(List.of(mock(Media.class)));
         when(mediaService.searchMedia("Nothing")).thenReturn(List.of());
 
-        // Found
         Scanner scanFound = new Scanner("""
                 3
                 Mock
@@ -76,7 +74,6 @@ class LibrarianTest {
         int resultFound = Librarian.handle(scanFound, mediaService, authService, user);
         assertEquals(0, resultFound);
 
-        // Not Found
         Scanner scanNotFound = new Scanner("""
                 3
                 Nothing
@@ -88,13 +85,11 @@ class LibrarianTest {
 
     @Test
     void testHandle_UpdateAndDeleteMedia() {
-        // Mock updateMediaQuantity returns true then false
         when(mediaService.updateMediaQuantity("123", 10)).thenReturn(true);
         when(mediaService.updateMediaQuantity("999", 5)).thenReturn(false);
         when(mediaService.deleteMedia("123")).thenReturn(true);
         when(mediaService.deleteMedia("999")).thenReturn(false);
 
-        // Update success
         Scanner scannerUpdateSuccess = new Scanner("""
                 6
                 123
@@ -104,7 +99,6 @@ class LibrarianTest {
         int resUpdateSuccess = Librarian.handle(scannerUpdateSuccess, mediaService, authService, user);
         assertEquals(0, resUpdateSuccess);
 
-        // Update fail
         Scanner scannerUpdateFail = new Scanner("""
                 6
                 999
@@ -114,7 +108,6 @@ class LibrarianTest {
         int resUpdateFail = Librarian.handle(scannerUpdateFail, mediaService, authService, user);
         assertEquals(0, resUpdateFail);
 
-        // Delete success
         Scanner scannerDeleteSuccess = new Scanner("""
                 7
                 123
@@ -123,7 +116,6 @@ class LibrarianTest {
         int resDeleteSuccess = Librarian.handle(scannerDeleteSuccess, mediaService, authService, user);
         assertEquals(0, resDeleteSuccess);
 
-        // Delete fail
         Scanner scannerDeleteFail = new Scanner("""
                 7
                 999
@@ -135,18 +127,15 @@ class LibrarianTest {
 
     @Test
     void testHandle_InvalidOption_Logout_Exit() {
-        // Invalid
         Scanner scanInvalid = new Scanner("abc\n9\n");
         int resInvalid = Librarian.handle(scanInvalid, mediaService, authService, user);
         assertEquals(0, resInvalid);
 
-        // Logout
         when(authService.logout()).thenReturn(true);
         Scanner scanLogout = new Scanner("8\n");
         int resLogout = Librarian.handle(scanLogout, mediaService, authService, user);
         assertEquals(1, resLogout);
 
-        // Exit
         Scanner scanExit = new Scanner("9\n");
         int resExit = Librarian.handle(scanExit, mediaService, authService, user);
         assertEquals(2, resExit);
@@ -154,7 +143,6 @@ class LibrarianTest {
 
     @Test
     void testHandle_DisplayBorrowRecordsAndFines() {
-        // BorrowRecords
         BorrowRecordService borrowService = mock(BorrowRecordService.class);
         when(mediaService.getBorrowRecordService()).thenReturn(borrowService);
         when(borrowService.getAllRecords()).thenReturn(List.of());
@@ -163,7 +151,6 @@ class LibrarianTest {
         int resBorrow = Librarian.handle(scanBorrow, mediaService, authService, user);
         assertEquals(0, resBorrow);
 
-        // Fines
         when(mediaService.getAllFines()).thenReturn(Map.of());
         Scanner scanFines = new Scanner("5\n9\n");
         int resFines = Librarian.handle(scanFines, mediaService, authService, user);
