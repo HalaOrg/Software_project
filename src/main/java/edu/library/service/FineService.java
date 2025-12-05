@@ -13,9 +13,7 @@ public class FineService {
     private final Path filePath;
     private final Map<String, Integer> balances = new HashMap<>();
 
-    // -----------------------------
-    //      Constructors
-    // -----------------------------
+
     public FineService() {
         this(resolveDefault("fines.txt"));
     }
@@ -29,26 +27,20 @@ public class FineService {
         load();
     }
 
-    // -----------------------------
-    //      GET BALANCE
-    // -----------------------------
+
     public int getBalance(String username) {
         if (username == null) return 0;
         return balances.getOrDefault(username, 0);
     }
 
-    // -----------------------------
-    //       ADD FINE
-    // -----------------------------
+
     public void addFine(String username, int amount) {
         if (username == null || amount <= 0) return;
         balances.put(username, getBalance(username) + amount);
         save();
     }
 
-    // -----------------------------
-    //       PAY FINE
-    // -----------------------------
+
     public int payFine(String username, int amount) {
         if (username == null || amount <= 0) return getBalance(username);
 
@@ -58,16 +50,12 @@ public class FineService {
         return updated;
     }
 
-    // -----------------------------
-    //       GET ALL BALANCES
-    // -----------------------------
+
     public Map<String, Integer> getAllBalances() {
-        return new HashMap<>(balances); // نسخة لمنع تعديل الخارجي
+        return new HashMap<>(balances);
     }
 
-    // -----------------------------
-    //      STORE BALANCE (LOGIN)
-    // -----------------------------
+
     public void storeBalanceOnLogin(String username) {
         if (username == null) return;
 
@@ -79,9 +67,7 @@ public class FineService {
     }
 
 
-    // -----------------------------
-    //      SAVE TO FILE
-    // -----------------------------
+
     void save() {
         try {
             if (filePath.getParent() != null)
@@ -104,9 +90,7 @@ public class FineService {
         }
     }
 
-    // -----------------------------
-    //      LOAD FROM FILE
-    // -----------------------------
+
     private void load() {
         balances.clear();
 
@@ -135,16 +119,12 @@ public class FineService {
         }
     }
 
-    // -----------------------------
-    //      SAVE BALANCES PUBLIC
-    // -----------------------------
+
     public void saveBalances() {
         save();
     }
 
-    // -----------------------------
-    //      DEFAULT PATH
-    // -----------------------------
+
     static String resolveDefault(String filename) {
         return Path.of(System.getProperty("user.dir", ""), filename).toString();
     }

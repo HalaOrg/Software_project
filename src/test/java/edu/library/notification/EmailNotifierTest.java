@@ -35,10 +35,8 @@ class EmailNotifierTest {
 
         emailNotifier.notify(user, message);
 
-        // تحقق أن sendEmail تم استدعاؤه مرة واحدة مع البيانات الصحيحة
         verify(mockEmailServer, times(1)).sendEmail("john@example.com", message);
 
-        // تحقق من طباعة الرسالة على الكونسول
         String consoleOutput = outContent.toString();
         assertTrue(consoleOutput.contains("=== Reminder Email ==="));
         assertTrue(consoleOutput.contains("To user   : john_doe"));
@@ -53,7 +51,7 @@ class EmailNotifierTest {
         emailNotifier.notify(null, message);
 
         verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
-        assertEquals("", outContent.toString()); // لا يجب أن يطبع شيء
+        assertEquals("", outContent.toString());
     }
 
     @Test
@@ -62,7 +60,7 @@ class EmailNotifierTest {
         emailNotifier.notify(user, null);
 
         verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
-        assertEquals("", outContent.toString()); // لا يجب أن يطبع شيء
+        assertEquals("", outContent.toString());
     }
 
     @Test
@@ -70,7 +68,7 @@ class EmailNotifierTest {
         emailNotifier.notify(null, null);
 
         verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
-        assertEquals("", outContent.toString()); // لا يجب أن يطبع شيء
+        assertEquals("", outContent.toString());
     }
 
     @BeforeEach

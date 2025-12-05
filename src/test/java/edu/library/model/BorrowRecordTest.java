@@ -7,9 +7,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BorrowRecordTest {
 
-    // =============================
-    //     Constructor Tests
-    // =============================
 
     @Test
     void testConstructorNormal() {
@@ -84,9 +81,6 @@ class BorrowRecordTest {
         assertNull(r.getDueDate());
     }
 
-    // =============================
-    //          Getter Tests
-    // =============================
     @Test
     void testGetReturnDateDirect() {
         LocalDate returnDate = LocalDate.now();
@@ -149,9 +143,7 @@ class BorrowRecordTest {
         assertEquals("ISBN-44-XYZ", r.getIsbn());
     }
 
-    // =============================
-    //        markReturned()
-    // =============================
+
 
     @Test
     void testMarkReturnedNormal() {

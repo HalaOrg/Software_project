@@ -14,10 +14,7 @@ import java.time.temporal.ChronoUnit;
 
 public class Librarian {
 
-    /**
-     * Handle librarian menu actions.
-     * return 0 = stay logged in, 1 = logout, 2 = exit app
-     */
+
     public static int handle(Scanner input, MediaService service, AuthService auth, Roles user) {
         System.out.println("\n--- Librarian Session: " + user.getUsername() + " (" + user.getRoleName() + ") ---");
         System.out.println("1. Add Media (Book/CD)");
@@ -62,7 +59,7 @@ public class Librarian {
                     media = new Book(title, author, isbn, qty);
                 }
                 service.addMedia(media);
-                System.out.println("✅ Media added successfully!");
+                System.out.println(" Media added successfully!");
                 return 0;
 
             case 2:
@@ -74,9 +71,9 @@ public class Librarian {
                 String keyword = input.nextLine();
                 List<Media> found = service.searchMedia(keyword);
                 if (found.isEmpty()) {
-                    System.out.println("❌ No matching media found!");
+                    System.out.println(" No matching media found!");
                 } else {
-                    System.out.println("✅ Found media:");
+                    System.out.println("Found media:");
                     for (Media m : found) System.out.println(m);
                 }
                 return 0;
@@ -113,19 +110,19 @@ public class Librarian {
 
             case 8:
                 if (auth.logout()) {
-                    System.out.println("✅ Logged out successfully.");
+                    System.out.println("Logged out successfully.");
                     return 1;
                 } else {
-                    System.out.println("⚠️ No user is currently logged in.");
+                    System.out.println(" No user is currently logged in.");
                     return 0;
                 }
 
             case 9:
-                System.out.println("👋 Exiting...");
+                System.out.println("Exiting...");
                 return 2;
 
             default:
-                System.out.println("❌ Invalid option. Try again.");
+                System.out.println("Invalid option. Try again.");
                 return 0;
         }
     }
@@ -147,7 +144,7 @@ public class Librarian {
             if (overdue) {
                 anyOverdue = true;
                 long daysOverdue = ChronoUnit.DAYS.between(record.getDueDate(), LocalDate.now());
-                System.out.println("⚠️ Overdue by " + daysOverdue + " day(s). Loans beyond 28 days trigger fines.");
+                System.out.println("Overdue by " + daysOverdue + " day(s). Loans beyond 28 days trigger fines.");
             }
         }
 

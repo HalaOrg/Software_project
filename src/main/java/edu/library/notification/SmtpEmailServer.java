@@ -88,12 +88,12 @@ public class SmtpEmailServer implements EmailServer {
 
         public SmtpEmailSettings() {
             this(
-                    "smtp.gmail.com",   // host
-                    587,                // port
-                    true,               // startTls
-                    "alaasawalhh14@gmail.com",   // SMTP_USERNAME (إيميل المكتبة اللي رح يبعث منّه)
-                    "gqpy otpj tlfb uwfe",       // SMTP_PASSWORD (app password من جوجل)
-                    "alaasawalhh14@gmail.com"    // from address
+                    "smtp.gmail.com",
+                    587,
+                    true,
+                    "alaasawalhh14@gmail.com",
+                    "gqpy otpj tlfb uwfe",
+                    "alaasawalhh14@gmail.com"
             );
         }
 
