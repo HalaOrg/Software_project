@@ -149,13 +149,15 @@ public class MediaService {
 
 
     public boolean borrow(Media m, String username) {
-        if (m == null) {
+        // Always work with the managed instance to keep quantities in sync
+        Media managedMedia = findByIsbn(m != null ? m.getIsbn() : null);
+        if (managedMedia == null) {
             System.out.println("Item not available.");
             return false;
         }
 
-        if (m.getAvailableCopies() <= 0) {
-            m.setAvailable(false);
+        if (managedMedia.getAvailableCopies() <= 0) {
+            managedMedia.setAvailable(false);
             System.out.println("Item not available.");
             return false;
         }
@@ -165,16 +167,16 @@ public class MediaService {
             return false;
         }
 
-        LocalDate dueDate = timeProvider.today().plusDays(m.getBorrowDurationDays());
+        LocalDate dueDate = timeProvider.today().plusDays(managedMedia.getBorrowDurationDays());
 
-        m.borrowOne();
+        managedMedia.borrowOne();
 
-        m.setAvailable(m.getAvailableCopies() > 0);
+        managedMedia.setAvailable(managedMedia.getAvailableCopies() > 0);
 
 
-        m.setDueDate(dueDate);
+        managedMedia.setDueDate(dueDate);
 
-        borrowRecordService.recordBorrow(username, m.getIsbn(), dueDate);
+        borrowRecordService.recordBorrow(username, managedMedia.getIsbn(), dueDate);
 
         saveAllMediaToFile();
         return true;
@@ -182,21 +184,33 @@ public class MediaService {
 
 
     public boolean returnMedia(Media m, String username) {
-        BorrowRecord active = borrowRecordService.findActiveBorrowRecord(username, m.getIsbn());
+        // Fetch the managed instance to ensure inventory updates are persisted
+        Media managedMedia = findByIsbn(m != null ? m.getIsbn() : null);
+        if (managedMedia == null) {
+            return false;
+        }
+
+        BorrowRecord active = borrowRecordService.findActiveBorrowRecord(username, managedMedia.getIsbn());
         if (active == null) return false;
 
         LocalDate originalDue = active.getDueDate();
         LocalDate returnDate = timeProvider.today();
 
-        m.returnOne();
-        if (m.getAvailableCopies() == m.getTotalCopies()) m.setDueDate(null);
+        managedMedia.returnOne();
+        if (managedMedia.getAvailableCopies() == managedMedia.getTotalCopies()) managedMedia.setDueDate(null);
 
         saveAllMediaToFile();
-        borrowRecordService.recordReturn(username, m.getIsbn(), returnDate);
+        borrowRecordService.recordReturn(username, managedMedia.getIsbn(), returnDate);
 
-        if (returnDate.isAfter(originalDue)) {
+        if (originalDue != null && returnDate.isAfter(originalDue)) {
             int overdueDays = (int) ChronoUnit.DAYS.between(originalDue, returnDate);
-            int fine = overdueDays * m.getDailyFine();
+
+            // Use fine calculator with correct media type instead of assuming books only
+            String mediaTypeKey = (managedMedia instanceof Book)
+                    ? FineCalculator.MEDIA_BOOK
+                    : FineCalculator.MEDIA_CD;
+
+            int fine = fineCalculator.calculate(mediaTypeKey, overdueDays);
             fineService.addFine(username, fine);
         }
 
@@ -344,6 +358,9 @@ public class MediaService {
 
         LocalDate today = timeProvider.today();
 
+        // Aggregate fines per user to avoid missing multiple overdue items
+        Map<String, Integer> recalculatedFines = new HashMap<>();
+
         for (BorrowRecord record : borrowRecordService.getRecords()) {
 
             if (record.isReturned()
@@ -352,21 +369,21 @@ public class MediaService {
                 continue;
             }
 
-            int overdueDays = (int) ChronoUnit.DAYS.between(
-                    record.getDueDate(),
-                    today
-            );
-
             Media media = findByIsbn(record.getIsbn());
             if (media == null) {
                 continue;
             }
 
+            int overdueDays = (int) ChronoUnit.DAYS.between(
+                    record.getDueDate(),
+                    today
+            );
+
             String mediaTypeKey;
             if (media instanceof Book) {
-                mediaTypeKey = FineCalculator.MEDIA_BOOK;   // 10 NIS لليوم (حسب ستراتجي الكتب)
+                mediaTypeKey = FineCalculator.MEDIA_BOOK;   // book rate (10/day)
             } else if (media instanceof CD) {
-                mediaTypeKey = FineCalculator.MEDIA_CD;     // 20 NIS لليوم (حسب ستراتجي الـ CD)
+                mediaTypeKey = FineCalculator.MEDIA_CD;     // CD rate (20/day)
             } else {
                 continue;
             }
@@ -374,10 +391,17 @@ public class MediaService {
             int newFineAmount = fineCalculator.calculate(mediaTypeKey, overdueDays);
 
             String username = record.getUsername();
+            recalculatedFines.merge(username, newFineAmount, Integer::sum);
+        }
+
+        // Only add the delta between recalculated totals and stored balances
+        for (Map.Entry<String, Integer> entry : recalculatedFines.entrySet()) {
+            String username = entry.getKey();
+            int recalculatedTotal = entry.getValue();
             int currentBalance = fineService.getBalance(username);
 
-            if (newFineAmount > currentBalance) {
-                int diff = newFineAmount - currentBalance;
+            if (recalculatedTotal > currentBalance) {
+                int diff = recalculatedTotal - currentBalance;
                 fineService.addFine(username, diff);
             }
         }
