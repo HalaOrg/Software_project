@@ -1,4 +1,4 @@
-/**
+
 package edu.library;
 import edu.library.fine.FineCalculator;
 import edu.library.model.Book;
@@ -14,7 +14,6 @@ import edu.library.service.ReminderService;
 import edu.library.notification.EmailNotifier;
 import edu.library.notification.SmtpEmailServer;
 import edu.library.time.SystemTimeProvider;
-
 import java.util.Scanner;
 
 public class Main {
@@ -30,6 +29,7 @@ public class Main {
                 new FineCalculator()
         );
 
+        service.updateFinesOnStartup();
 
 
         AuthService auth = new AuthService(fineService);;
@@ -141,4 +141,3 @@ public class Main {
 
 
 }
-*/

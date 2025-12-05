@@ -340,5 +340,58 @@ public class MediaService {
             );
         }
     }
+    public void updateFinesOnStartup() {
+
+        LocalDate today = timeProvider.today();
+
+        // Aggregate fines per user to avoid missing multiple overdue items
+        Map<String, Integer> recalculatedFines = new HashMap<>();
+
+        for (BorrowRecord record : borrowRecordService.getRecords()) {
+
+            if (record.isReturned()
+                    || record.getDueDate() == null
+                    || !today.isAfter(record.getDueDate())) {
+                continue;
+            }
+
+            Media media = findByIsbn(record.getIsbn());
+            if (media == null) {
+                continue;
+            }
+
+            int overdueDays = (int) ChronoUnit.DAYS.between(
+                    record.getDueDate(),
+                    today
+            );
+
+            String mediaTypeKey;
+            if (media instanceof Book) {
+                mediaTypeKey = FineCalculator.MEDIA_BOOK;   // book rate (10/day)
+            } else if (media instanceof CD) {
+                mediaTypeKey = FineCalculator.MEDIA_CD;     // CD rate (20/day)
+            } else {
+                continue;
+            }
+
+            int newFineAmount = fineCalculator.calculate(mediaTypeKey, overdueDays);
+
+            String username = record.getUsername();
+            recalculatedFines.merge(username, newFineAmount, Integer::sum);
+        }
+
+        // Only add the delta between recalculated totals and stored balances
+        for (Map.Entry<String, Integer> entry : recalculatedFines.entrySet()) {
+            String username = entry.getKey();
+            int recalculatedTotal = entry.getValue();
+            int currentBalance = fineService.getBalance(username);
+
+            if (recalculatedTotal > currentBalance) {
+                int diff = recalculatedTotal - currentBalance;
+                fineService.addFine(username, diff);
+            }
+        }
+    }
+
 
 }
