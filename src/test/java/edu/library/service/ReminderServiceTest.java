@@ -45,7 +45,7 @@ class ReminderServiceTest {
 
         reminderService.sendReminderForUser(user);
 
-        verify(observer).notify(user, "You have 1 overdue book(s).");
+        verify(observer).notify(user, "You have 1 overdue item(s).");
     }
 
 
