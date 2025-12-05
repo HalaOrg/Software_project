@@ -1,19 +1,20 @@
 package edu.library.service;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.util.Map;
 import edu.library.model.Book;
 import edu.library.model.CD;
 import edu.library.model.Media;
 import edu.library.fine.FineCalculator;
 import edu.library.time.TimeProvider;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.PrintStream;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -25,17 +26,23 @@ class MediaServiceTest {
     private FineService fineService;
     private TimeProvider timeProvider;
 
+    @TempDir
+    Path tempDir;          // فولدر مؤقت لكل تيست
+
+    private Path mediaFile; // ملف الميديا جوّا الـ tempDir
+
     @BeforeEach
     void setUp() throws Exception {
         borrowRecordService = new BorrowRecordService();
-        fineService = new FineService(); // جديد لكل اختبار
+        fineService = new FineService();
         timeProvider = mock(TimeProvider.class);
 
-        File tempFile = File.createTempFile("media_test", ".txt");
-        tempFile.deleteOnExit();
+        // ننشئ ملف مؤقت داخل tempDir بدل File.createTempFile
+        mediaFile = tempDir.resolve("media_test.txt");
+        Files.createFile(mediaFile);
 
         mediaService = new MediaService(
-                tempFile.getAbsolutePath(),
+                mediaFile.toString(),
                 borrowRecordService,
                 fineService,
                 timeProvider,
@@ -79,10 +86,6 @@ class MediaServiceTest {
     }
 
     // ---------------------------------------------------------
-    //                TEST: BORROW / RETURN BOOK
-    // ---------------------------------------------------------
-
-    // ---------------------------------------------------------
     //                TEST: BORROW / RETURN CD
     // ---------------------------------------------------------
     @Test
@@ -90,12 +93,14 @@ class MediaServiceTest {
         CD cd = new CD("Greatest Hits", "Artist1", "C1", 1, 1);
         mediaService.addMedia(cd);
 
+        // نتأكد ما عليه غرامات
         fineService.payFine("user1", fineService.getBalance("user1"));
 
         when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 3));
         assertTrue(mediaService.borrowCD(cd, "user1"));
         assertEquals(0, cd.getAvailableCopies());
 
+        // ما في نسخ متاحة
         assertFalse(mediaService.borrowCD(cd, "user2"));
 
         when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 5));
@@ -214,6 +219,4 @@ class MediaServiceTest {
 
         System.setOut(originalOut);
     }
-
-
 }

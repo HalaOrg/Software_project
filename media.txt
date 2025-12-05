@@ -1,0 +1,4 @@
+BOOK;Java Programming;Author A;ISBN001;٠;٠;2026-01-02
+BOOK;Python Basics;Author B;ISBN002;١;١;null
+CD;Java CD;Author A;CD001;٠;٠;2025-12-12
+CD;Python CD;Author B;CD002;١;١;null

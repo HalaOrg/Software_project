@@ -18,25 +18,33 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import static org.junit.jupiter.api.Assertions.*;
-
-
 class AuthServiceTest {
 
     private AuthService authService;
     private FineService fineService;
     private BorrowRecordService mockBorrow;
 
-    @BeforeEach
-    void setUp() {
-        fineService = mock(FineService.class);
-        authService = new AuthService(fineService);
+    @TempDir
+    Path tempDir;      // كل تيست له فولدر مؤقت خاص فيه
 
-        // نضيف مستخدمين للاختبار
+    private Path usersFile;  // users.txt داخل الـ tempDir
+
+    @BeforeEach
+    void setUp() throws IOException {
+        fineService = mock(FineService.class);
+        mockBorrow = mock(BorrowRecordService.class);
+
+        // نحدد ملف users.txt داخل الفولدر المؤقت
+        usersFile = tempDir.resolve("users.txt");
+        Files.createFile(usersFile);
+
+        // نستخدم الكونستركتور اللي يسمح بتحديد المسار + fineService
+        authService = new AuthService(usersFile.toString(), fineService);
+
+        // نضيف المستخدمين اللي بدنا نشتغل عليهم في معظم التيستات
         authService.addUser("admin", "adminpwd", "ADMIN", "admin@example.com");
         authService.addUser("member1", "pwd1", "MEMBER", "member1@example.com");
         authService.addUser("member2", "pwd2", "MEMBER", "member2@example.com");
-
-        mockBorrow = mock(BorrowRecordService.class);
     }
 
     @Test
@@ -76,20 +84,34 @@ class AuthServiceTest {
 
     @Test
     void testDefaultConstructor() {
-        // هذا سيستخدم resolveDefault("users.txt") و FineService افتراضي
-        AuthService defaultAuth = new AuthService();
-        assertNotNull(defaultAuth);
+        // نخلي الـ working directory يروح على tempDir
+        String oldDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
+        try {
+            AuthService defaultAuth = new AuthService();
+            assertNotNull(defaultAuth);
+            // نتأكد إنه أنشأ users.txt في tempDir مش في المشروع الحقيقي
+            assertTrue(Files.exists(tempDir.resolve("users.txt")));
+        } finally {
+            System.setProperty("user.dir", oldDir);
+        }
     }
 
     @Test
     void testConstructorWithFineService() {
-        AuthService auth = new AuthService(fineService);
-        assertNotNull(auth);
+        String oldDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
+        try {
+            AuthService auth = new AuthService(fineService);
+            assertNotNull(auth);
+            assertTrue(Files.exists(tempDir.resolve("users.txt")));
+        } finally {
+            System.setProperty("user.dir", oldDir);
+        }
     }
 
     @Test
     void testAddUserOverload() {
-        // نختبر الدالة اللي ترجع overload
         Roles role = authService.addUser("user1", "pass1", "MEMBER", "user1@example.com");
         assertNotNull(role);
 
@@ -97,29 +119,32 @@ class AuthServiceTest {
         assertEquals("MEMBER", role.getRoleName());
         assertEquals("user1@example.com", role.getEmail());
     }
-
     @Test
     void testResolveDefaultViaConstructor() throws IOException {
-        // مجرد اختبار أنه constructor ينجح ويقوم بإنشاء الملف حتى لو لم يكن موجود
-        Path tempFile = tempDir.resolve("users.txt");
-        assertFalse(Files.exists(tempFile));
-        AuthService auth = new AuthService(tempFile.toString());
-        assertTrue(Files.exists(tempFile));
+        Path fileInsideTemp = tempDir.resolve("users_resolve.txt");
+
+        assertFalse(Files.exists(fileInsideTemp));
+
+        AuthService auth = new AuthService(fileInsideTemp.toString());
+
+        assertTrue(Files.exists(fileInsideTemp));
     }
 
+
     @Test
-    void testAddUserAndCatchIOExceptions() throws IOException {
-        // ملف مؤقت مع path غير صالح → سيغطي catch(IOException) عند إنشاء أو حفظ الملف
+    void testAddUserAndCatchIOExceptions() {
+        // مسار غير صالح داخل tempDir ليغطي catch(IOException)
         Path badPath = tempDir.resolve("invalid_dir/users.txt");
         AuthService auth = new AuthService(badPath.toString());
 
-        // addUser يجب ألا يرمي exception
-        assertDoesNotThrow(() -> auth.addUser("userX", "pwdX", "MEMBER"));
+        assertDoesNotThrow(() ->
+                auth.addUser("userX", "pwdX", "MEMBER")
+        );
     }
 
     @Test
     void testAddUserWithNullParameters() {
-        Path usersFile = tempDir.resolve("users.txt");
+        Path usersFile = tempDir.resolve("users_null.txt");
         AuthService auth = new AuthService(usersFile.toString());
 
         assertNull(auth.addUser(null, "pwd", "MEMBER", "x@example.com"));
@@ -131,8 +156,8 @@ class AuthServiceTest {
 
     @Test
     void testUserExistsAndRemoveUserCaseInsensitive() {
-        Path usersFile = tempDir.resolve("users.txt");
-        AuthService auth = new AuthService(usersFile.toString());
+        Path file = tempDir.resolve("users_case.txt");
+        AuthService auth = new AuthService(file.toString());
 
         auth.addUser("TestUser", "pwd", "MEMBER", "t@example.com");
         assertTrue(auth.userExists("testuser"));
@@ -143,9 +168,9 @@ class AuthServiceTest {
 
     @Test
     void testLogoutAndCurrentAdmin() throws IOException {
-        Path usersFile = tempDir.resolve("users.txt");
-        Files.write(usersFile, Collections.singletonList("admin,adminpwd,ADMIN,admin@example.com"));
-        AuthService auth = new AuthService(usersFile.toString());
+        Path file = tempDir.resolve("users_admin.txt");
+        Files.write(file, Collections.singletonList("admin,adminpwd,ADMIN,admin@example.com"));
+        AuthService auth = new AuthService(file.toString());
 
         assertNull(auth.getCurrentUser());
         Roles admin = auth.login("admin", "adminpwd");
@@ -158,19 +183,15 @@ class AuthServiceTest {
         assertFalse(auth.logout()); // logout ثانية بدون مستخدم
     }
 
-
-    @TempDir
-    Path tempDir;
-
     @Test
     void loginReadsUsersFromFile() throws IOException {
-        Path usersFile = tempDir.resolve("users.txt");
-        Files.write(usersFile, Arrays.asList(
-                "admin,admin123,ADMIN",
-                "member,member123,MEMBER"
+        Path file = tempDir.resolve("users_login.txt");
+        Files.write(file, Arrays.asList(
+                "admin,admin123,ADMIN,admin@example.com",
+                "member,member123,MEMBER,member@example.com"
         ));
 
-        AuthService authService = new AuthService(usersFile.toString());
+        AuthService authService = new AuthService(file.toString());
 
         Roles admin = authService.login("admin", "admin123");
         assertNotNull(admin);
@@ -184,13 +205,13 @@ class AuthServiceTest {
 
     @Test
     void addUserPersistsToDisk() {
-        Path usersFile = tempDir.resolve("users.txt");
-        AuthService authService = new AuthService(usersFile.toString());
+        Path file = tempDir.resolve("users_persist.txt");
+        AuthService authService = new AuthService(file.toString());
 
         assertNull(authService.login("librarian", "lib123"));
         authService.addUser("librarian", "lib123", "LIBRARIAN", "librarian@example.com");
 
-        AuthService reloaded = new AuthService(usersFile.toString());
+        AuthService reloaded = new AuthService(file.toString());
         Roles librarian = reloaded.login("librarian", "lib123");
         assertNotNull(librarian);
         assertEquals("LIBRARIAN", librarian.getRoleName());
@@ -198,9 +219,9 @@ class AuthServiceTest {
 
     @Test
     void loginFailsForUnknownCredentials() throws IOException {
-        Path usersFile = tempDir.resolve("users.txt");
-        Files.write(usersFile, Collections.singletonList("user,password,MEMBER"));
-        AuthService authService = new AuthService(usersFile.toString());
+        Path file = tempDir.resolve("users_fail.txt");
+        Files.write(file, Collections.singletonList("user,password,MEMBER,user@example.com"));
+        AuthService authService = new AuthService(file.toString());
 
         assertNull(authService.login("user", "wrong"));
         assertNull(authService.login("unknown", "password"));
@@ -208,16 +229,16 @@ class AuthServiceTest {
 
     @Test
     void login_success() throws IOException {
-        Path usersFile = tempDir.resolve("users.txt");
-        Files.write(usersFile, Collections.singletonList("alice,alicepwd,MEMBER"));
-        AuthService auth = new AuthService(usersFile.toString());
+        Path file = tempDir.resolve("users_success.txt");
+        Files.write(file, Collections.singletonList("alice,alicepwd,MEMBER,alice@example.com"));
+
+        AuthService auth = new AuthService(file.toString());
 
         Roles r = auth.login("alice", "alicepwd");
         assertNotNull(r);
         assertEquals("alice", r.getUsername());
         assertEquals("MEMBER", r.getRoleName());
     }
-
     @Test
     void login_wrongPassword() throws IOException {
         Path usersFile = tempDir.resolve("users.txt");
@@ -485,25 +506,28 @@ class AuthServiceTest {
 
     @Test
     void testIOExceptionDuringAuthServiceInit() {
-        // path غير صالح عمداً → سيؤدي إلى IOException عند إنشاء الملف
-        String badPath = "Z:\\invalid_path\\users.txt";
+        // مسار "غريب" جوّا tempDir، الهدف نتأكد إنه حتى لو صار IOException جوّا الكونسّتركتور ما يطلع لبرا
+        Path badFile = tempDir
+                .resolve("invalid_dir")
+                .resolve("users.txt");
 
-        // لا يجب أن يرمي استثناء عند init
-        assertDoesNotThrow(() -> new AuthService(badPath));
+        assertDoesNotThrow(() -> new AuthService(badFile.toString()));
     }
     @Test
-    void testIOExceptionInSaveUsersToFile() {
-        // مسار مستحيل الكتابة إليه → يجبر FileWriter على رمي IOException
-        String badPath = "/invalid/path/users.txt";
+    void testIOExceptionInSaveUsersToFile() throws IOException {
+        // نعمل فولدر ونمرره كأنه ملف → هذا غالبًا بيعمل IOException عند الكتابة
+        Path dirAsFile = tempDir.resolve("not_a_file");
+        Files.createDirectory(dirAsFile);   // صار Directory فعليًا
 
-        // إنشاء AuthService باستخدام المسار غير الصالح
-        AuthService auth = new AuthService(badPath, new FineService());
+        // نمرر المسار للكلاس (المسار هذا هو فولدر، مش ملف)
+        AuthService auth = new AuthService(dirAsFile.toString(), new FineService());
 
-        // addUser يجب أن يدخل catch ولا يرمي Exception
+        // addUser لازم يدخل في catch(IOException) جوّا الكلاس وما يرمي Exception لبرا
         assertDoesNotThrow(() ->
                 auth.addUser("userX", "pwX", "MEMBER")
         );
     }
+
 
 
 
