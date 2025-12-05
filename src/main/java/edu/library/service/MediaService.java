@@ -154,8 +154,14 @@ public class MediaService {
             return false;
         }
 
-        if (m.getAvailableCopies() <= 0) {
-            m.setAvailable(false);
+        Media managedMedia = findByIsbn(m.getIsbn());
+        if (managedMedia == null) {
+            System.out.println("Item not available.");
+            return false;
+        }
+
+        if (managedMedia.getAvailableCopies() <= 0) {
+            managedMedia.setAvailable(false);
             System.out.println("Item not available.");
             return false;
         }
@@ -165,16 +171,22 @@ public class MediaService {
             return false;
         }
 
-        LocalDate dueDate = timeProvider.today().plusDays(m.getBorrowDurationDays());
+        if (hasOverdueBorrow(username)) {
+            System.out.println("Resolve overdue items before borrowing.");
+            return false;
+        }
 
-        m.borrowOne();
+        LocalDate dueDate = timeProvider.today().plusDays(managedMedia.getBorrowDurationDays());
 
-        m.setAvailable(m.getAvailableCopies() > 0);
+        managedMedia.borrowOne();
+        if (managedMedia.getAvailableCopies() == 0) {
+            managedMedia.setAvailable(false);
+        }
 
 
-        m.setDueDate(dueDate);
+        managedMedia.setDueDate(dueDate);
 
-        borrowRecordService.recordBorrow(username, m.getIsbn(), dueDate);
+        borrowRecordService.recordBorrow(username, managedMedia.getIsbn(), dueDate);
 
         saveAllMediaToFile();
         return true;
@@ -251,6 +263,14 @@ public class MediaService {
         List<CD> cds = new ArrayList<>();
         for (Media m : items) if (m instanceof CD) cds.add((CD) m);
         return cds;
+    }
+
+    private boolean hasOverdueBorrow(String username) {
+        if (username == null) return false;
+
+        LocalDate today = timeProvider.today();
+        return borrowRecordService.getActiveBorrowRecordsForUser(username).stream()
+                .anyMatch(record -> record.getDueDate() != null && today.isAfter(record.getDueDate()));
     }
 
     public List<Book> searchBook(String keyword) {
@@ -338,6 +358,34 @@ public class MediaService {
                     m.getTotalCopies(),
                     (m.getDueDate() != null ? m.getDueDate() : "None")
             );
+        }
+    }
+
+    //update fines for overdue items on startup
+    public void updateFinesOnStartup() {
+
+        for (BorrowRecord record : borrowRecordService.getRecords()) {
+
+            if (!record.isReturned()
+                    && record.getDueDate() != null
+                    && timeProvider.today().isAfter(record.getDueDate())) {
+
+                int overdueDays = (int) ChronoUnit.DAYS.between(
+                        record.getDueDate(),
+                        timeProvider.today()
+                );
+
+                int newFineAmount = fineCalculator.calculate(FineCalculator.MEDIA_BOOK, overdueDays);
+
+                String username = record.getUsername();
+
+                int currentBalance = fineService.getBalance(username);
+
+                if (newFineAmount > currentBalance) {
+                    int diff = newFineAmount - currentBalance;
+                    fineService.addFine(username, diff);
+                }
+            }
         }
     }
 

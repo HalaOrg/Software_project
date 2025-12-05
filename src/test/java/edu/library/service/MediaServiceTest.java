@@ -99,6 +99,41 @@ class MediaServiceTest {
     }
 
     @Test
+    void borrowShouldReduceAvailableCopiesWithoutResettingTotal() {
+        Book book = new Book("Borrowable Book", "Author", "ISBN-BRR", 2, 2);
+        mediaService.addMedia(book);
+
+        when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 3));
+
+        assertTrue(mediaService.borrowBook(book, "user1"));
+        assertEquals(1, book.getAvailableCopies(), "Available copies should decrease by one after borrow");
+        assertEquals(2, book.getTotalCopies(), "Total copies should remain unchanged after borrow");
+    }
+
+    @Test
+    void borrowShouldPersistReducedAvailability() throws Exception {
+        Book book = new Book("Persistent Borrow", "Author", "ISBN-PERSIST", 3, 3);
+        mediaService.addMedia(book);
+
+        when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 3));
+
+        assertTrue(mediaService.borrowBook(book, "user1"));
+
+        MediaService reloadedService = new MediaService(
+                mediaFile.toString(),
+                borrowRecordService,
+                fineService,
+                timeProvider,
+                new FineCalculator()
+        );
+
+        Book storedBook = reloadedService.findBookByIsbn("ISBN-PERSIST");
+        assertNotNull(storedBook, "Borrowed book should exist after reload");
+        assertEquals(2, storedBook.getAvailableCopies(), "Available copies should be saved after borrow");
+        assertEquals(3, storedBook.getTotalCopies(), "Total copies should remain unchanged after persistence");
+    }
+
+    @Test
     void testBorrowFailsWhenNotAvailableOrWithFine() {
         when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 3));
 

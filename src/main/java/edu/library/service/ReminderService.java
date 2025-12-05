@@ -71,7 +71,7 @@ public class ReminderService {
             return;
         }
 
-        String message = "You have " + overdueCount + " overdue book(s).";
+        String message = "You have " + overdueCount + " overdue item(s).";
 
         if (observers.isEmpty()) {
             observers.add(new EmailNotifier(new SmtpEmailServer()));
