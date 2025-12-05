@@ -20,7 +20,7 @@ public class ReminderService {
     private final AuthService authService;
     private final TimeProvider timeProvider;
 
-    private final List<Observer> observers = new ArrayList<>();   // ← يستخدم Observer الصحيح
+    private final List<Observer> observers = new ArrayList<>();
 
     public ReminderService(BorrowRecordService borrowRecordService, AuthService authService, TimeProvider timeProvider) {
         this.borrowRecordService = borrowRecordService;

@@ -59,7 +59,7 @@ public class CDTest {
     @Test
     void testBorrowReducesAvailableCopies() {
         CD cd = new CD("Album", "Singer", "777", 2);
-        cd.borrowOne(); // inherited from Media
+        cd.borrowOne();
 
         assertEquals(1, cd.getAvailableCopies());
         assertTrue(cd.isAvailable());

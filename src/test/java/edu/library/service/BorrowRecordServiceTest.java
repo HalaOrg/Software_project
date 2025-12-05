@@ -128,8 +128,8 @@ class BorrowRecordServiceTest {
     void loadRecords_skipsMalformedLines() throws IOException {
         Path file = tempDir.resolve("malformed.txt");
         Files.write(file, List.of(
-                "short,line", // معيب
-                "user1,ISBN1,2025-12-03,false,null" // صحيح
+                "short,line",
+                "user1,ISBN1,2025-12-03,false,null"
         ));
 
         BorrowRecordService service = new BorrowRecordService(file.toString());
@@ -146,7 +146,7 @@ class BorrowRecordServiceTest {
         LocalDate dueDate = LocalDate.now();
         service.recordBorrow("user1", "ISBN1", dueDate);
 
-        // reload
+
         BorrowRecordService reloaded = new BorrowRecordService(file.toString());
         List<BorrowRecord> records = reloaded.getRecords();
         assertEquals(1, records.size());
@@ -162,12 +162,11 @@ class BorrowRecordServiceTest {
         List<BorrowRecord> list = service.getAllRecords();
         assertEquals(1, list.size());
 
-        list.clear(); // تعديل النسخة لا يؤثر على الأصلي
+        list.clear();
         assertEquals(1, service.getRecords().size());
     }
     @Test
     void testConstructorIOException() {
-        // مسار مستحيل تمُرّره للكونستركتور
         String badPath = "/invalid/path/records.txt";
 
         assertDoesNotThrow(() -> {

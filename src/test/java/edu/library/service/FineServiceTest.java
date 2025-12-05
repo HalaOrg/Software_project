@@ -38,7 +38,6 @@ public class FineServiceTest {
     void testIOExceptionDuringConstructor() {
         FineService spyFine = Mockito.spy(new FineService(finesFile.toString()));
 
-        // مثال على فرض IOException عند resolveDefault أو save
         assertDoesNotThrow(() -> new FineService(),
                 "Constructor should handle IOException without throwing");
     }
@@ -141,7 +140,6 @@ public class FineServiceTest {
     }
     @Test
     void testSaveBalances_callsSaveOnce() {
-        // fineService هو spy بالفعل من setUp
         fineService.saveBalances();
         verify(fineService, times(1)).save();
     }

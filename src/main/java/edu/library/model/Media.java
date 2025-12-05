@@ -37,9 +37,6 @@ public abstract class Media {
     }
 
 
-    // ========================
-    //      Getter / Setter
-    // ========================
     public String getTitle() { return title; }
     public String getAuthor() { return author; }
     public String getIsbn() { return isbn; }
@@ -59,7 +56,6 @@ public abstract class Media {
         this.availableCopies = Math.max(0, Math.min(availableCopies, totalCopies));
     }
 
-    // دالة جديدة: بدل setAvailable()
     public void setAvailable(boolean available) {
         if (available) {
             this.availableCopies = this.totalCopies;
@@ -88,13 +84,11 @@ public abstract class Media {
         return !isAvailable() && dueDate != null && LocalDate.now().isAfter(dueDate);
     }
 
-    // مدة الاستعارة
     public abstract int getBorrowDurationDays();
 
-    // الغرامة اليومية
+
     public abstract int getDailyFine();
 
-    // ⭐ دالة جديدة تستعملها للـ CD
     public int getBorrowDuration() {
         return getBorrowDurationDays();
     }

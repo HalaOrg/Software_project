@@ -20,11 +20,9 @@ class SmtpEmailServerUltimateTest {
         );
     }
 
-    // ====== Constructor & fromAddress fallback ======
     @Test
     void testConstructorSetsFromAddressWhenNull() {
         SmtpEmailServer server = new SmtpEmailServer(defaultSettings);
-        // fromAddress fallback
         assertEquals("user", server.getFromAddress());
     }
 
@@ -37,7 +35,6 @@ class SmtpEmailServerUltimateTest {
         assertEquals("from@host.com", server.getFromAddress());
     }
 
-    // ====== Default constructor & getters ======
     @Test
     void testDefaultConstructorAndGetters() {
         SmtpEmailServer server = new SmtpEmailServer();
@@ -51,7 +48,6 @@ class SmtpEmailServerUltimateTest {
         assertEquals("alaasawalhh14@gmail.com", server.getFromAddress());
     }
 
-    // ====== sendEmail early return for null/blank params ======
     @Test
     void testSendEmailReturnsEarlyForNullOrBlankParams() {
         SmtpEmailServer server = new SmtpEmailServer(defaultSettings);
@@ -61,7 +57,6 @@ class SmtpEmailServerUltimateTest {
         server.sendEmail("to@example.com", null);
     }
 
-    // ====== sendEmail not configured ======
     @Test
     void testSendEmailNotConfiguredPrintsMessage() {
         SmtpEmailServer.SmtpEmailSettings badSettings =
@@ -70,7 +65,6 @@ class SmtpEmailServerUltimateTest {
         server.sendEmail("to@example.com", "Hello");
     }
 
-    // ====== sendEmail configured with Transport & Authenticator ======
     @Test
     void testSendEmailConfiguredWithMockTransportAndAuthenticator() throws Exception {
         SmtpEmailServer server = new SmtpEmailServer(defaultSettings);
@@ -80,10 +74,8 @@ class SmtpEmailServerUltimateTest {
 
             server.sendEmail("receiver@example.com", "Test message");
 
-            // تحقق من fromAddress و username فقط
             assertEquals("user", server.getFromAddress());
             assertEquals("user", server.getUsername());
-            // password صحيح → لا نحتاج assert عليه، branch مغطى بالفعل
             assertEquals("smtp.example.com", server.getHost());
 
             mockedTransport.verify(() -> Transport.send(Mockito.any(MimeMessage.class)), Mockito.times(1));
@@ -91,7 +83,6 @@ class SmtpEmailServerUltimateTest {
     }
 
 
-    // ====== sendEmail throws RuntimeException ======
     @Test
     void testSendEmailThrowsRuntimeException() throws Exception {
         SmtpEmailServer server = new SmtpEmailServer(
@@ -108,16 +99,13 @@ class SmtpEmailServerUltimateTest {
         }
     }
 
-    // ====== isConfigured branch true & false ======
     @Test
     void testIsConfiguredBranches() throws Exception {
-        // branch false
         SmtpEmailServer emptyServer = new SmtpEmailServer(
                 new SmtpEmailServer.SmtpEmailSettings("", 587, true, "", "", null)
         );
         emptyServer.sendEmail("to@example.com", "msg");
 
-        // branch true
         SmtpEmailServer validServer = new SmtpEmailServer(
                 new SmtpEmailServer.SmtpEmailSettings("smtp.example.com", 587, true, "user", "pass", "from@example.com")
         );

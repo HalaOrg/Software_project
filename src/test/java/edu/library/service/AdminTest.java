@@ -180,36 +180,31 @@ class AdminTest {
     }
     @Test
     void testFoundBooksPrinting() {
-        // إعداد كتب تجريبية
         Book b1 = new Book("Java Basics", "Author A", "111");
         Book b2 = new Book("Advanced Java", "Author B", "222");
         List<Book> foundBooks = List.of(b1, b2);
 
-        // إعادة توجيه الـ System.out لالتقاط الطباعة
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         System.setOut(new PrintStream(outContent));
 
-        // تنفيذ الكود
         if (foundBooks.isEmpty()) {
             System.out.println("No books found.");
         } else {
-            System.out.println("✅ Found books:");
+            System.out.println("Found books:");
             for (Book b : foundBooks) System.out.println(b);
         }
 
-        // التحقق من المخرجات
         String output = outContent.toString();
-        assertTrue(output.contains("✅ Found books:"));
+        assertTrue(output.contains("Found books:"));
         assertTrue(output.contains("Java Basics"));
         assertTrue(output.contains("Advanced Java"));
 
-        // إعادة System.out لحالته الأصلية
         System.setOut(System.out);
     }
 
     @Test
     void testNoBooksFoundPrinting() {
-        List<Book> foundBooks = List.of(); // قائمة فارغة
+        List<Book> foundBooks = List.of();
 
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         System.setOut(new PrintStream(outContent));
@@ -217,7 +212,7 @@ class AdminTest {
         if (foundBooks.isEmpty()) {
             System.out.println("No books found.");
         } else {
-            System.out.println("✅ Found books:");
+            System.out.println(" Found books:");
             for (Book b : foundBooks) System.out.println(b);
         }
 
@@ -228,31 +223,26 @@ class AdminTest {
     }
     @Test
     void testFoundCDsPrinting() {
-        // إعداد CDs تجريبية
         CD cd1 = new CD("Greatest Hits", "Artist A", "111");
         CD cd2 = new CD("Top Charts", "Artist B", "222");
         List<CD> foundCDs = List.of(cd1, cd2);
 
-        // إعادة توجيه الـ System.out لالتقاط الطباعة
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
 
-        // تنفيذ الكود كما في البرنامج
         if (foundCDs.isEmpty()) {
-            System.out.println("❌ No matching CDs found!");
+            System.out.println(" No matching CDs found!");
         } else {
-            System.out.println("✅ Found CDs:");
+            System.out.println(" Found CDs:");
             for (CD c : foundCDs) System.out.println(c);
         }
 
-        // التحقق من المخرجات
         String output = outContent.toString();
-        assertTrue(output.contains("✅ Found CDs:"));
+        assertTrue(output.contains(" Found CDs:"));
         assertTrue(output.contains("Greatest Hits"));
         assertTrue(output.contains("Top Charts"));
 
-        // إعادة System.out لحالته الأصلية
         System.setOut(originalOut);
     }
 

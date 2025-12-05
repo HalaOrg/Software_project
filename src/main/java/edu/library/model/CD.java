@@ -23,11 +23,11 @@ public class CD extends Media {
 
     @Override
     public int getBorrowDurationDays() {
-        return 7; // CD = 7 days
+        return 7;
     }
 
     @Override
     public int getDailyFine() {
-        return 20; // CD = 20 NIS
+        return 20;
     }
 }

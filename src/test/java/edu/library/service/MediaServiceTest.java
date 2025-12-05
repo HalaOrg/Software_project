@@ -1,20 +1,21 @@
 package edu.library.service;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Map;
+
 import edu.library.model.Book;
 import edu.library.model.CD;
-import edu.library.model.Media;
 import edu.library.fine.FineCalculator;
 import edu.library.time.TimeProvider;
-
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -27,9 +28,9 @@ class MediaServiceTest {
     private TimeProvider timeProvider;
 
     @TempDir
-    Path tempDir;          // فولدر مؤقت لكل تيست
+    Path tempDir;
 
-    private Path mediaFile; // ملف الميديا جوّا الـ tempDir
+    private Path mediaFile;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -37,7 +38,6 @@ class MediaServiceTest {
         fineService = new FineService();
         timeProvider = mock(TimeProvider.class);
 
-        // ننشئ ملف مؤقت داخل tempDir بدل File.createTempFile
         mediaFile = tempDir.resolve("media_test.txt");
         Files.createFile(mediaFile);
 
@@ -50,9 +50,6 @@ class MediaServiceTest {
         );
     }
 
-    // ---------------------------------------------------------
-    //                 TEST: ADD / SEARCH / DELETE
-    // ---------------------------------------------------------
     @Test
     void testAddSearchDeleteMedia() {
         Book b1 = new Book("Book1", "Author1", "ISBN1", 2, 2);
@@ -70,9 +67,6 @@ class MediaServiceTest {
         assertFalse(mediaService.deleteMedia("UNKNOWN"));
     }
 
-    // ---------------------------------------------------------
-    //                TEST: UPDATE QUANTITY
-    // ---------------------------------------------------------
     @Test
     void testUpdateMediaQuantity() {
         Book b1 = new Book("Book1", "Author1", "ISBN1", 5, 5);
@@ -85,22 +79,18 @@ class MediaServiceTest {
         assertFalse(mediaService.updateMediaQuantity("UNKNOWN", 5));
     }
 
-    // ---------------------------------------------------------
-    //                TEST: BORROW / RETURN CD
-    // ---------------------------------------------------------
+
     @Test
     void testBorrowAndReturnCD() {
         CD cd = new CD("Greatest Hits", "Artist1", "C1", 1, 1);
         mediaService.addMedia(cd);
 
-        // نتأكد ما عليه غرامات
         fineService.payFine("user1", fineService.getBalance("user1"));
 
         when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 3));
         assertTrue(mediaService.borrowCD(cd, "user1"));
         assertEquals(0, cd.getAvailableCopies());
 
-        // ما في نسخ متاحة
         assertFalse(mediaService.borrowCD(cd, "user2"));
 
         when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 5));
@@ -108,15 +98,12 @@ class MediaServiceTest {
         assertEquals(1, cd.getAvailableCopies());
     }
 
-    // ---------------------------------------------------------
-    //           TEST: BORROW FAILS (NO COPIES / HAS FINE)
-    // ---------------------------------------------------------
     @Test
     void testBorrowFailsWhenNotAvailableOrWithFine() {
         when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 3));
 
         Book b1 = new Book("Book1", "Author1", "ISBN1", 1);
-        b1.setAvailableCopies(0); // نجبره يكون مش متوفر
+        b1.setAvailableCopies(0);
         mediaService.addMedia(b1);
 
         assertFalse(mediaService.borrowBook(b1, "user1"));
@@ -128,9 +115,6 @@ class MediaServiceTest {
         assertFalse(mediaService.borrowBook(b2, "user2"));
     }
 
-    // ---------------------------------------------------------
-    //         TEST: GET ALL MEDIA / BOOKS / CDS / FINES
-    // ---------------------------------------------------------
     @Test
     void testGetAllMediaBooksCDsAndFines() {
         Book b1 = new Book("Book1", "Author1", "ISBN1", 1, 1);
@@ -150,9 +134,6 @@ class MediaServiceTest {
         assertEquals(30, fines.get("user1"));
     }
 
-    // ---------------------------------------------------------
-    //             TEST: SEARCH BOOK / CD
-    // ---------------------------------------------------------
     @Test
     void testSearchBookAndCD() {
         Book b1 = new Book("Java Programming", "Author1", "B1", 1, 1);
@@ -164,9 +145,6 @@ class MediaServiceTest {
         assertEquals(1, mediaService.searchCD("Hits").size());
     }
 
-    // ---------------------------------------------------------
-    //           TEST: FIND BY ISBN (BOOK + CD)
-    // ---------------------------------------------------------
     @Test
     void testFindBookAndCDByIsbn() {
         Book b1 = new Book("Java Programming", "Author1", "B1", 1, 1);
@@ -181,9 +159,6 @@ class MediaServiceTest {
         assertNull(mediaService.findCDByIsbn("UNKNOWN"));
     }
 
-    // ---------------------------------------------------------
-    //           TEST: DISPLAY MEDIA (EMPTY)
-    // ---------------------------------------------------------
     @Test
     void testDisplayMedia_emptyList_printsNoMedia() {
         PrintStream originalOut = System.out;
@@ -196,9 +171,6 @@ class MediaServiceTest {
         System.setOut(originalOut);
     }
 
-    // ---------------------------------------------------------
-    //           TEST: DISPLAY MEDIA (FILLED)
-    // ---------------------------------------------------------
     @Test
     void testDisplayMedia_withItems_printsAllMedia() {
         Book book1 = new Book("Java Basics", "Author1", "B1", 2, 2);

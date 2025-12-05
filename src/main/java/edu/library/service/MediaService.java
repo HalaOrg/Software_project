@@ -20,9 +20,7 @@ public class MediaService {
 
     private List<Media> items = new ArrayList<>();
 
-    // -----------------------------
-    //      Constructors
-    // -----------------------------
+
     public MediaService() {
         this("media.txt",
                 new BorrowRecordService(),
@@ -52,9 +50,7 @@ public class MediaService {
         this(filePath, borrowRecordService, fineService, new SystemTimeProvider(), new FineCalculator());
     }
 
-    // -----------------------------
-    //       LOAD / SAVE
-    // -----------------------------
+
     private void loadMediaFromFile(String filename) {
         File file = new File(filename);
         if (!file.exists()) return;
@@ -109,9 +105,7 @@ public class MediaService {
         }
     }
 
-    // -----------------------------
-    //          CRUD
-    // -----------------------------
+
     public void addMedia(Media media) {
         items.add(media);
         saveAllMediaToFile();
@@ -153,38 +147,31 @@ public class MediaService {
         return result;
     }
 
-    // -----------------------------
-    //          BORROW / RETURN
-    // -----------------------------
+
     public boolean borrow(Media m, String username) {
         if (m == null) {
             System.out.println("Item not available.");
             return false;
         }
 
-        // إذا ما في نسخ متاحة
         if (m.getAvailableCopies() <= 0) {
             m.setAvailable(false);
             System.out.println("Item not available.");
             return false;
         }
 
-        // في حال وجود غرامات
         if (fineService.getBalance(username) > 0) {
             System.out.println("Pay fines before borrowing.");
             return false;
         }
 
-        // حساب تاريخ الإرجاع
         LocalDate dueDate = timeProvider.today().plusDays(m.getBorrowDurationDays());
 
-        // تقليل الكمية
         m.borrowOne();
 
-        // ضبط availability حسب الكمية الحالية
         m.setAvailable(m.getAvailableCopies() > 0);
 
-        // ضبط موعد الإرجاع
+
         m.setDueDate(dueDate);
 
         borrowRecordService.recordBorrow(username, m.getIsbn(), dueDate);
@@ -216,9 +203,7 @@ public class MediaService {
         return true;
     }
 
-    // -----------------------------
-    //          HELPERS
-    // -----------------------------
+
     public Media findByIsbn(String isbn) {
         for (Media m : items) {
             if (m.getIsbn().equalsIgnoreCase(isbn)) return m;
@@ -247,9 +232,7 @@ public class MediaService {
         return borrowRecordService.hasActiveBorrows(username);
     }
 
-    // -----------------------------
-    //    Admin & Librarian
-    // -----------------------------
+
     public List<Media> getAllMedia() {
         return new ArrayList<>(items);
     }
@@ -308,9 +291,7 @@ public class MediaService {
         return active;
     }
 
-    // -----------------------------
-    // CD Methods
-    // -----------------------------
+
     public List<CD> searchCD(String keyword) {
         List<CD> result = new ArrayList<>();
         if (keyword == null || keyword.isBlank()) return result;
