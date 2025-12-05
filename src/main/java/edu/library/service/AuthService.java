@@ -159,8 +159,12 @@ public class AuthService {
         File file = new File(filePath);
 
         if (!file.exists()) {
-            try { file.createNewFile(); }
-            catch (IOException e) { System.out.println("Error creating users file: " + e.getMessage()); }
+            try {
+                file.getParentFile().mkdirs(); // إنشاء المجلدات إذا لم توجد
+                file.createNewFile();
+            } catch (IOException e) {
+                System.out.println("Error creating users file: " + e.getMessage());
+            }
             return;
         }
 
@@ -171,9 +175,11 @@ public class AuthService {
                 if (line.trim().isEmpty()) continue;
 
                 String[] p = line.split(",");
-                String username = p.length > 0 ? p[0].trim() : "";
-                String password = p.length > 1 ? p[1].trim() : "";
-                String roleName = p.length > 2 ? p[2].trim() : "";
+                if (p.length < 3) continue; // <-- هذا هو الشرط المهم لتجاهل السطور المعيبة
+
+                String username = p[0].trim();
+                String password = p[1].trim();
+                String roleName = p[2].trim();
                 String email = p.length > 3 ? p[3].trim() : "";
 
                 users.add(new Roles(username, password, roleName, email));
@@ -183,6 +189,7 @@ public class AuthService {
             System.out.println("Error reading users: " + e.getMessage());
         }
     }
+
 
     private void saveUsersToFile() {
         try (BufferedWriter w = new BufferedWriter(new FileWriter(filePath))) {

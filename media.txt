@@ -1,6 +1,0 @@
-CD;gg;gg;11;١;١;null
-BOOK;dd;dd;123;١;١;null
-BOOK;ee;ww;22;١;٠;2025-12-29
-BOOK;ala;alaa;133;١;١;null
-CD;cdd;cd;3;١;١;null
-CD;HH;HH;55;٧;٧;null

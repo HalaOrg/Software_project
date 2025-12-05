@@ -6,21 +6,34 @@ import static org.junit.jupiter.api.Assertions.*;
 class BookFineStrategyTest {
 
     @Test
-    void testCalculateFine_zeroOrNegativeOverdue() {
+    void testCalculateFinePositiveDays() {
         BookFineStrategy strategy = new BookFineStrategy();
 
-        // الغرامة يجب أن تكون صفر إذا لم يكن هناك تأخير
-        assertEquals(0, strategy.calculateFine(0), "Overdue 0 days should return 0 fine");
-        assertEquals(0, strategy.calculateFine(-3), "Negative overdue days should return 0 fine");
+        assertEquals(10, strategy.calculateFine(1), "1 day overdue should be 10");
+        assertEquals(20, strategy.calculateFine(2), "2 days overdue should be 20");
+        assertEquals(100, strategy.calculateFine(10), "10 days overdue should be 100");
     }
 
     @Test
-    void testCalculateFine_positiveOverdue() {
+    void testCalculateFineZeroDays() {
         BookFineStrategy strategy = new BookFineStrategy();
 
-        // الغرامة = عدد الأيام المتأخرة * 10
-        assertEquals(10, strategy.calculateFine(1), "1 day overdue should return 10 NIS");
-        assertEquals(70, strategy.calculateFine(7), "7 days overdue should return 70 NIS");
-        assertEquals(100, strategy.calculateFine(10), "10 days overdue should return 100 NIS");
+        assertEquals(0, strategy.calculateFine(0), "0 overdue days should return 0");
+    }
+
+    @Test
+    void testCalculateFineNegativeDays() {
+        BookFineStrategy strategy = new BookFineStrategy();
+
+        assertEquals(0, strategy.calculateFine(-1), "Negative overdue days should return 0");
+        assertEquals(0, strategy.calculateFine(-100), "Negative overdue days should return 0");
+    }
+
+    @Test
+    void testCalculateFineLargeNumber() {
+        BookFineStrategy strategy = new BookFineStrategy();
+
+        int largeDays = 1_000;
+        assertEquals(largeDays * 10, strategy.calculateFine(largeDays), "Large number of overdue days should be calculated correctly");
     }
 }

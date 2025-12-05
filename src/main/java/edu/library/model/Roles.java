@@ -7,7 +7,6 @@ public class Roles {
     private final String password;
     private final String roleName;
     private final String email;
-
     public Roles(String username, String password) {
         this(username, password, "MEMBER", null);
     }
@@ -22,6 +21,13 @@ public class Roles {
         this.password = password;
         this.roleName = roleName == null ? "UNKNOWN" : roleName;
         this.email = email == null ? "" : email;
+    }
+
+    public Roles(String username) {
+        this.username = username;
+        this.password = "";
+        this.roleName = "MEMBER";
+        this.email = "";
     }
 
     public String getUsername() {

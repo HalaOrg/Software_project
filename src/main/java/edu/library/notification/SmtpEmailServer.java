@@ -20,6 +20,11 @@ public class SmtpEmailServer implements EmailServer {
     private final String password;
     private final String fromAddress;
 
+    public String getHost() { return host; }
+    public String getUsername() { return username; }
+    public String getPassword() { return password; }
+    public String getFromAddress() { return fromAddress; }
+
     public SmtpEmailServer() {
         this(new SmtpEmailSettings());
     }
@@ -86,11 +91,12 @@ public class SmtpEmailServer implements EmailServer {
                     "smtp.gmail.com",   // host
                     587,                // port
                     true,               // startTls
-                    "halaeid807@gmail.com",   // SMTP_USERNAME (إيميل المكتبة اللي رح يبعث منّه)
-                    "SMTP_PASSWORD",       // SMTP_PASSWORD (app password من جوجل)
-                    "halaeid807@gmail.com"    // from address
+                    "alaasawalhh14@gmail.com",   // SMTP_USERNAME (إيميل المكتبة اللي رح يبعث منّه)
+                    "gqpy otpj tlfb uwfe",       // SMTP_PASSWORD (app password من جوجل)
+                    "alaasawalhh14@gmail.com"    // from address
             );
         }
+
 
         public SmtpEmailSettings(String host, int port, boolean startTls, String username, String password, String fromAddress) {
             this.host = host;

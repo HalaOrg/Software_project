@@ -80,7 +80,7 @@ public class BorrowRecordService {
     // -------------------------------------------------
     //      Load & Save
     // -------------------------------------------------
-    private void loadRecords() {
+    void loadRecords() {
         records.clear();
         File file = new File(filePath);
 
@@ -166,4 +166,26 @@ public class BorrowRecordService {
     public List<BorrowRecord> getAllRecords() {
         return new ArrayList<>(records);
     }
+    public void closeRecord(String username, String isbn) {
+        for (BorrowRecord record : records) {
+            if (!record.isReturned()
+                    && record.getUsername().equals(username)
+                    && record.getIsbn().equals(isbn)) {
+
+                record.markReturned(LocalDate.now());
+                saveAll();
+                return;
+            }
+        }
+
+        // fallback
+        BorrowRecord fallback = new BorrowRecord(username, isbn, LocalDate.now(), true, LocalDate.now());
+        records.add(fallback);
+        saveAll();
+    }
+    public void addBorrowRecord(BorrowRecord record) {
+        records.add(record);
+        appendRecord(record);
+    }
+
 }

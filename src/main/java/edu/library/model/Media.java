@@ -29,34 +29,45 @@ public abstract class Media {
     }
 
     public Media(String title, String author, String isbn, int available, int total) {
-        this.title=title;
-        this.author=author;
+        this.title = title;
+        this.author = author;
         this.isbn = isbn;
-        this.availableCopies=available;
-        this.totalCopies=total;
-
+        this.availableCopies = available;
+        this.totalCopies = total;
     }
 
-    // -----------------------------
-    //       Getters + Setters
-    // -----------------------------
+
+    // ========================
+    //      Getter / Setter
+    // ========================
     public String getTitle() { return title; }
     public String getAuthor() { return author; }
     public String getIsbn() { return isbn; }
 
     public int getTotalCopies() { return totalCopies; }
+
     public void setTotalCopies(int totalCopies) {
         this.totalCopies = Math.max(0, totalCopies);
-        // تعديل availableCopies إذا كانت أكبر من totalCopies
         if (availableCopies > this.totalCopies) {
             availableCopies = this.totalCopies;
         }
     }
 
     public int getAvailableCopies() { return availableCopies; }
+
     public void setAvailableCopies(int availableCopies) {
         this.availableCopies = Math.max(0, Math.min(availableCopies, totalCopies));
     }
+
+    // دالة جديدة: بدل setAvailable()
+    public void setAvailable(boolean available) {
+        if (available) {
+            this.availableCopies = this.totalCopies;
+        } else {
+            this.availableCopies = 0;
+        }
+    }
+
 
     public boolean isAvailable() {
         return availableCopies > 0;
@@ -77,11 +88,16 @@ public abstract class Media {
         return !isAvailable() && dueDate != null && LocalDate.now().isAfter(dueDate);
     }
 
-    // كل نوع media عنده مدة استلاف مختلفة
+    // مدة الاستعارة
     public abstract int getBorrowDurationDays();
 
-    // كل نوع له غرامة مختلفة
+    // الغرامة اليومية
     public abstract int getDailyFine();
+
+    // ⭐ دالة جديدة تستعملها للـ CD
+    public int getBorrowDuration() {
+        return getBorrowDurationDays();
+    }
 
     @Override
     public String toString() {

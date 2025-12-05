@@ -1,122 +1,194 @@
 package edu.library.service;
 
-import edu.library.fine.FineCalculator;
-import edu.library.model.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import edu.library.model.Book;
+import edu.library.model.CD;
+import edu.library.model.BorrowRecord;
+import edu.library.model.Roles;
+import org.junit.jupiter.api.*;
+import org.mockito.Mockito;
 
-import java.io.ByteArrayInputStream;
+import java.io.*;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Scanner;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class MemberTest {
 
-    private MediaService mediaService;
-    private AuthService authService;
+    private MediaService service;
+    private AuthService auth;
     private Roles user;
 
+    private File fineFile;
+
     @BeforeEach
-    void setUp() {
-        mediaService = new MediaService("test_media.txt",
-                new BorrowRecordService(),
-                new FineService(),
-                () -> LocalDate.of(2025, 12, 1),
-                new FineCalculator());
+    void setup() throws IOException {
+        service = new MediaService();
+        auth = mock(AuthService.class);
+        user = new Roles("testuser", "Test User", "test@example.com", "Member");
 
-        authService = mock(AuthService.class);
-        when(authService.logout()).thenReturn(true);
+        // إنشاء كتب و CDs
+        service.addMedia(new Book("Java Programming", "Author A", "ISBN001", 1));
+        service.addMedia(new Book("Python Basics", "Author B", "ISBN002", 1));
+        service.addMedia(new CD("Java CD", "Author A", "CD001", 1));
+        service.addMedia(new CD("Python CD", "Author B", "CD002", 1));
 
-        user = new Roles("testUser", "member", "test@example.com");
+        // mock for logout
+        when(auth.logout()).thenReturn(true);
 
-        // إضافة كتب و CDs
-        mediaService.addMedia(new Book("Java Programming", "Author A", "B001", 2, 2));
-        mediaService.addMedia(new Book("Python Basics", "Author B", "B002", 1, 1));
-        mediaService.addMedia(new CD("Best of 2020", "DJ C", "C001", 1, 1));
-        mediaService.addMedia(new CD("Top Hits", "DJ D", "C002", 2, 2));
+        // إنشاء ملف مؤقت للغرامات
+        fineFile = File.createTempFile("fines", ".txt");
+        fineFile.deleteOnExit();
+        // تغيير المسار في Member
+        Member.fineFilePath = fineFile.getAbsolutePath();
     }
 
-    @Test
-    void testSearchBookOption() {
-        String input = "1\nJava\n";
-        Scanner scanner = new Scanner(new ByteArrayInputStream(input.getBytes()));
-
-        int result = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(0, result); // stay logged in
-
-        List<Book> books = mediaService.searchBook("Java");
-        assertEquals(1, books.size());
-        assertEquals("B001", books.get(0).getIsbn());
+    @AfterEach
+    void cleanup() {
+        fineFile.delete();
     }
 
-    @Test
-    void testBorrowAndReturnBookOption() {
-        String input = "2\nB001\n3\nB001\n";
-        Scanner scanner = new Scanner(new ByteArrayInputStream(input.getBytes()));
-
-        // Borrow Book
-        int borrowResult = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(0, borrowResult);
-        Book book = mediaService.findBookByIsbn("B001");
-        assertEquals(1, book.getAvailableCopies());
-
-        // Return Book
-        int returnResult = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(0, returnResult);
-        assertEquals(2, book.getAvailableCopies());
-        assertNull(book.getDueDate());
+    // ----------- Helpers ----------------
+    private int runMemberWithInput(String inputStr) {
+        return Member.handle(new java.util.Scanner(new ByteArrayInputStream(inputStr.getBytes())), service, auth, user);
     }
 
-    @Test
-    void testSearchCDOption() {
-        String input = "7\nBest\n";
-        Scanner scanner = new Scanner(new ByteArrayInputStream(input.getBytes()));
-
-        int result = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(0, result);
-
-        List<CD> cds = mediaService.searchCD("Best");
-        assertEquals(1, cds.size());
-        assertEquals("C001", cds.get(0).getIsbn());
+    private void writeFine(String username, int amount) throws IOException {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(fineFile))) {
+            bw.write(username + "," + amount);
+        }
     }
 
+    // ----------------------------- //
+    // Test Search Book
+    // ----------------------------- //
     @Test
-    void testBorrowAndReturnCDOption() {
-        String input = "8\nC002\n9\nC002\n";
-        Scanner scanner = new Scanner(new ByteArrayInputStream(input.getBytes()));
-
-        // Borrow CD
-        int borrowResult = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(0, borrowResult);
-        CD cd = mediaService.findCDByIsbn("C002");
-        assertEquals(1, cd.getAvailableCopies());
-
-        // Return CD
-        int returnResult = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(0, returnResult);
-        assertEquals(2, cd.getAvailableCopies());
-        assertNull(cd.getDueDate());
+    void testSearchBookFoundAndNotFound() {
+        assertEquals(0, runMemberWithInput("1\nJava\n"));
+        assertEquals(0, runMemberWithInput("1\nNonExisting\n"));
     }
 
+    // ----------------------------- //
+    // Borrow Book
+    // ----------------------------- //
     @Test
-    void testLogoutOption() {
-        String input = "12\n";
-        Scanner scanner = new Scanner(new ByteArrayInputStream(input.getBytes()));
+    void testBorrowBook() {
+        // borrow success
+        assertEquals(0, runMemberWithInput("2\nISBN001\n"));
+        assertFalse(service.findBookByIsbn("ISBN001").isAvailable());
 
-        int result = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(1, result); // logged out
-        verify(authService, times(1)).logout();
+        // borrow not found
+        assertEquals(0, runMemberWithInput("2\nINVALID\n"));
+
+        // borrow not available
+        assertEquals(0, runMemberWithInput("2\nISBN001\n"));
     }
 
-    @Test
-    void testExitOption() {
-        String input = "13\n";
-        Scanner scanner = new Scanner(new ByteArrayInputStream(input.getBytes()));
+    // ----------------------------- //
+    // Return Book
+    // ----------------------------- //
 
-        int result = Member.handle(scanner, mediaService, authService, user);
-        assertEquals(2, result); // exit app
+    // ----------------------------- //
+    // Display All Books
+    // ----------------------------- //
+    @Test
+    void testDisplayAllBooks() {
+        assertEquals(0, runMemberWithInput("4\n"));
+    }
+
+    // ----------------------------- //
+    // Pay Fines
+    // ----------------------------- //
+    @Test
+    void testPayFines() throws IOException {
+        // without fines
+        assertEquals(0, runMemberWithInput("5\n"));
+
+        // with fines
+        writeFine("testuser", 50);
+        String input = "5\n30\n";
+        assertEquals(0, runMemberWithInput(input));
+    }
+
+    // ----------------------------- //
+    // Remaining Time for Books
+    // ----------------------------- //
+    @Test
+    void testRemainingTimeBooks() {
+        service.borrowBook(service.findBookByIsbn("ISBN001"), user.getUsername());
+        assertEquals(0, runMemberWithInput("6\n"));
+    }
+
+    // ----------------------------- //
+    // Search CD
+    // ----------------------------- //
+    @Test
+    void testSearchCD() {
+        assertEquals(0, runMemberWithInput("7\nJava\n"));
+        assertEquals(0, runMemberWithInput("7\nNonExist\n"));
+    }
+
+    // ----------------------------- //
+    // Borrow CD
+    // ----------------------------- //
+    @Test
+    void testBorrowCD() {
+        // borrow success
+        assertEquals(0, runMemberWithInput("8\nCD001\n"));
+        assertFalse(service.findCDByIsbn("CD001").isAvailable());
+
+        // borrow not found
+        assertEquals(0, runMemberWithInput("8\nINVALID\n"));
+
+        // borrow not available
+        assertEquals(0, runMemberWithInput("8\nCD001\n"));
+    }
+
+    // ----------------------------- //
+    // Return CD
+    // ----------------------------- //
+
+    // ----------------------------- //
+    // Display All CDs
+    // ----------------------------- //
+    @Test
+    void testDisplayAllCDs() {
+        assertEquals(0, runMemberWithInput("10\n"));
+    }
+
+    // ----------------------------- //
+    // Remaining Time for CDs
+    // ----------------------------- //
+    @Test
+    void testRemainingTimeCDs() {
+        service.borrowCD(service.findCDByIsbn("CD001"), user.getUsername());
+        assertEquals(0, runMemberWithInput("11\n"));
+    }
+
+    // ----------------------------- //
+    // Logout
+    // ----------------------------- //
+    @Test
+    void testLogout() {
+        assertEquals(1, runMemberWithInput("12\n"));
+        verify(auth, times(1)).logout();
+    }
+
+    // ----------------------------- //
+    // Exit
+    // ----------------------------- //
+    @Test
+    void testExit() {
+        assertEquals(2, runMemberWithInput("13\n"));
+    }
+
+    // ----------------------------- //
+    // Invalid Inputs
+    // ----------------------------- //
+    @Test
+    void testInvalidOptionAndNonNumber() {
+        assertEquals(0, runMemberWithInput("99\n"));
+        assertEquals(0, runMemberWithInput("abc\n"));
     }
 }

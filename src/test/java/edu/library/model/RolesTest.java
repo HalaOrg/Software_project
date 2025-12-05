@@ -4,73 +4,111 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class RolesTest {
+public class RolesTest {
 
     @Test
-    void testConstructorWithUsernameAndPassword() {
-        Roles r = new Roles("user1", "pass123");
-
-        assertEquals("user1", r.getUsername());
-        assertEquals("pass123", r.getPassword());
-        assertEquals("MEMBER", r.getRoleName());   // role افتراضي
-        assertEquals("", r.getEmail());            // email افتراضي
+    void testConstructorWithUsernamePassword() {
+        Roles r = new Roles("areej", "1234");
+        assertEquals("areej", r.getUsername());
+        assertEquals("1234", r.getPassword());
+        assertEquals("MEMBER", r.getRoleName());
+        assertEquals("", r.getEmail());
+        assertTrue(r.isMember());
+        assertFalse(r.isAdmin());
+        assertFalse(r.isLibrarian());
     }
 
     @Test
     void testConstructorWithRole() {
-        Roles r = new Roles("admin", "123", "ADMIN");
-
-        assertEquals("admin", r.getUsername());
-        assertEquals("123", r.getPassword());
+        Roles r = new Roles("lama", "pass", "ADMIN");
         assertEquals("ADMIN", r.getRoleName());
+        assertTrue(r.isAdmin());
+        assertFalse(r.isMember());
+        assertFalse(r.isLibrarian());
     }
 
     @Test
-    void testConstructorWithNullRole() {
-        Roles r = new Roles("test", "1234", null);
+    void testConstructorWithRoleAndEmail() {
+        Roles r = new Roles("ali", "pass", "LIBRARIAN", "ali@test.com");
+        assertEquals("LIBRARIAN", r.getRoleName());
+        assertEquals("ali@test.com", r.getEmail());
+        assertTrue(r.isLibrarian());
+    }
 
+    @Test
+    void testNullRoleReplacedWithUnknown() {
+        Roles r = new Roles("x", "y", null, "email@test");
         assertEquals("UNKNOWN", r.getRoleName());
     }
 
     @Test
-    void testConstructorWithEmail() {
-        Roles r = new Roles("user", "pass", "MEMBER", "u@u.com");
-
-        assertEquals("MEMBER", r.getRoleName());
-        assertEquals("u@u.com", r.getEmail());
+    void testNullEmailReplacedWithEmpty() {
+        Roles r = new Roles("x", "y", "ADMIN", null);
+        assertEquals("", r.getEmail());
     }
 
     @Test
-    void testRoleChecks() {
-        Roles admin = new Roles("a", "1", "ADMIN");
-        Roles librarian = new Roles("l", "2", "LIBRARIAN");
-        Roles member = new Roles("m", "3", "MEMBER");
-
-        assertTrue(admin.isAdmin());
-        assertFalse(admin.isMember());
-        assertTrue(librarian.isLibrarian());
-        assertTrue(member.isMember());
+    void testIsAdminCaseInsensitive() {
+        Roles r = new Roles("user", "pass", "AdMiN");
+        assertTrue(r.isAdmin());
     }
 
     @Test
-    void testEqualsAndHashCode() {
-        Roles r1 = new Roles("user", "pass");
-        Roles r2 = new Roles("user", "pass");
-        Roles r3 = new Roles("user", "different");
+    void testIsMemberCaseInsensitive() {
+        Roles r = new Roles("user", "pass", "MeMbEr");
+        assertTrue(r.isMember());
+    }
 
+    @Test
+    void testIsLibrarianCaseInsensitive() {
+        Roles r = new Roles("user", "pass", "LiBrArIaN");
+        assertTrue(r.isLibrarian());
+    }
+
+    @Test
+    void testToStringNotNull() {
+        Roles r = new Roles("a", "b", "ADMIN", "a@test.com");
+        assertNotNull(r.toString());
+        assertTrue(r.toString().contains("username='a'"));
+    }
+
+    @Test
+    void testEqualsSameObject() {
+        Roles r = new Roles("a", "b");
+        assertEquals(r, r);
+    }
+
+    @Test
+    void testEqualsDifferentObjectSameData() {
+        Roles r1 = new Roles("a", "b");
+        Roles r2 = new Roles("a", "b");
         assertEquals(r1, r2);
         assertEquals(r1.hashCode(), r2.hashCode());
-
-        assertNotEquals(r1, r3);
     }
 
     @Test
-    void testToString() {
-        Roles r = new Roles("x", "y", "ADMIN", "mail@mail.com");
-        String str = r.toString();
+    void testEqualsDifferentUsername() {
+        Roles r1 = new Roles("a", "b");
+        Roles r2 = new Roles("x", "b");
+        assertNotEquals(r1, r2);
+    }
 
-        assertTrue(str.contains("ADMIN"));
-        assertTrue(str.contains("x"));
-        assertTrue(str.contains("mail@mail.com"));
+    @Test
+    void testEqualsDifferentPassword() {
+        Roles r1 = new Roles("a", "b");
+        Roles r2 = new Roles("a", "c");
+        assertNotEquals(r1, r2);
+    }
+
+    @Test
+    void testEqualsWithNull() {
+        Roles r1 = new Roles("a", "b");
+        assertNotEquals(r1, null);
+    }
+
+    @Test
+    void testEqualsWithDifferentClass() {
+        Roles r1 = new Roles("a", "b");
+        assertNotEquals(r1, "string");
     }
 }
