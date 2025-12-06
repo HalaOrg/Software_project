@@ -79,6 +79,11 @@
                     </goals>
                 </execution>
             </executions>
+            <configuration>
+                <excludes>
+                    <exclude>**/Main.java</exclude>
+                </excludes>
+            </configuration>
         </plugin>
 
         <!-- JUnit 5 -->
