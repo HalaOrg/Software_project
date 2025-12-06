@@ -32,8 +32,8 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       - name: Build and analyze
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -B clean test
-          mvn -B jacoco:report
+          mvn -B clean verify
           mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
