@@ -179,7 +179,7 @@ public class AuthService {
     }
 
 
-    private void saveUsersToFile() {
+    void saveUsersToFile() {
         try (BufferedWriter w = new BufferedWriter(new FileWriter(filePath))) {
             for (Roles u : users) {
                 w.write(String.format("%s,%s,%s,%s%n",
