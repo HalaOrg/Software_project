@@ -1,21 +1,22 @@
 package edu.library.notification;
 
 import edu.library.model.Roles;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class EmailNotifierTest {
 
     private EmailServer mockEmailServer;
     private EmailNotifier emailNotifier;
 
+    // لو حابة تكمّلي التقاط System.out (مش ضروري بعد logger)
     private final PrintStream originalOut = System.out;
     private ByteArrayOutputStream outContent;
 
@@ -24,8 +25,14 @@ class EmailNotifierTest {
         mockEmailServer = mock(EmailServer.class);
         emailNotifier = new EmailNotifier(mockEmailServer);
 
+        // تقدرِ تشيلي هذول لو مش ناوية تفحص الـ output
         outContent = new ByteArrayOutputStream();
         System.setOut(new PrintStream(outContent));
+    }
+
+    @AfterEach
+    void tearDown() {
+        System.setOut(originalOut);
     }
 
     @Test
@@ -35,44 +42,38 @@ class EmailNotifierTest {
 
         emailNotifier.notify(user, message);
 
-        verify(mockEmailServer, times(1)).sendEmail("john@example.com", message);
-
-        String consoleOutput = outContent.toString();
-        assertTrue(consoleOutput.contains("=== Reminder Email ==="));
-        assertTrue(consoleOutput.contains("To user   : john_doe"));
-        assertTrue(consoleOutput.contains("Email     : john@example.com"));
-        assertTrue(consoleOutput.contains("Message   : Your book is overdue!"));
-        assertTrue(consoleOutput.contains("======================"));
+        // أهم شيء: التأكد إنه تم إرسال الإيميل مرة واحدة
+        verify(mockEmailServer, times(1))
+                .sendEmail("john@example.com", message);
     }
 
     @Test
     void testNotifyWithNullUser() {
         String message = "Your book is overdue!";
+
         emailNotifier.notify(null, message);
 
-        verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
-        assertEquals("", outContent.toString());
+        // ما بصير يرسل إيميل
+        verify(mockEmailServer, never())
+                .sendEmail(anyString(), anyString());
     }
 
     @Test
     void testNotifyWithNullMessage() {
         Roles user = new Roles("john_doe", "password", "MEMBER", "john@example.com");
+
         emailNotifier.notify(user, null);
 
-        verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
-        assertEquals("", outContent.toString());
+        verify(mockEmailServer, never())
+                .sendEmail(anyString(), anyString());
     }
 
     @Test
     void testNotifyWithNullUserAndMessage() {
+
         emailNotifier.notify(null, null);
 
-        verify(mockEmailServer, never()).sendEmail(anyString(), anyString());
-        assertEquals("", outContent.toString());
-    }
-
-    @BeforeEach
-    void tearDown() {
-        System.setOut(originalOut);
+        verify(mockEmailServer, never())
+                .sendEmail(anyString(), anyString());
     }
 }
