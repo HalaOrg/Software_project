@@ -5,14 +5,12 @@ import edu.library.notification.Observer;
 import edu.library.time.TimeProvider;
 import org.junit.jupiter.api.Test;
 import java.util.Arrays;
-import java.util.List;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 class ReminderServiceTest {
     @Test

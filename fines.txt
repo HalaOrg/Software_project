@@ -1,1 +1,2 @@
-remah,80
+leen,90
+ahmad,60

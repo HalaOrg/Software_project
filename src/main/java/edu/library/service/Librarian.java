@@ -59,7 +59,7 @@ public class Librarian {
                     media = new Book(title, author, isbn, qty);
                 }
                 service.addMedia(media);
-                System.out.println(" Media added successfully!");
+                System.out.println("Media added successfully!");
                 return 0;
 
             case 2:
@@ -71,7 +71,7 @@ public class Librarian {
                 String keyword = input.nextLine();
                 List<Media> found = service.searchMedia(keyword);
                 if (found.isEmpty()) {
-                    System.out.println(" No matching media found!");
+                    System.out.println("No matching media found!");
                 } else {
                     System.out.println("Found media:");
                     for (Media m : found) System.out.println(m);
@@ -110,7 +110,7 @@ public class Librarian {
 
             case 8:
                 if (auth.logout()) {
-                    System.out.println("Logged out successfully.");
+                    System.out.println(" Logged out successfully.");
                     return 1;
                 } else {
                     System.out.println(" No user is currently logged in.");
@@ -128,7 +128,6 @@ public class Librarian {
     }
 
     private static void displayBorrowRecords(MediaService service) {
-        // استخدم BorrowRecordService للحصول على جميع السجلات
         List<BorrowRecord> records = service.getBorrowRecordService().getAllRecords();
         if (records.isEmpty()) {
             System.out.println("No borrow records available.");

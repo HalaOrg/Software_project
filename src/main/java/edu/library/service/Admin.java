@@ -40,7 +40,7 @@ public class Admin {
         String opt = input.nextLine();
         int optInt;
         try { optInt = Integer.parseInt(opt.trim()); }
-        catch (Exception e) { System.out.println(" Invalid option"); return 0; }
+        catch (Exception e) { System.out.println("Invalid option"); return 0; }
 
         switch (optInt) {
 
@@ -119,7 +119,7 @@ public class Admin {
                 System.out.print("Enter new librarian's username: ");
                 String libUser = input.nextLine();
                 if (auth.userExists(libUser)) {
-                    System.out.println(" User already exists: " + libUser);
+                    System.out.println("User already exists: " + libUser);
                     return 0;
                 }
 
@@ -127,7 +127,7 @@ public class Admin {
                 String libPass = input.nextLine();
 
                 auth.addUser(libUser, libPass, "LIBRARIAN", libEmail);
-                System.out.println(" Librarian added: " + libUser);
+                System.out.println("Librarian added: " + libUser);
                 return 0;
 
             case 6:
@@ -140,7 +140,7 @@ public class Admin {
                 }
 
                 if (!user.isAdmin()) {
-                    System.out.println(" Only administrators can unregister users.");
+                    System.out.println("Only administrators can unregister users.");
                     return 0;
                 }
 
@@ -170,7 +170,7 @@ public class Admin {
 
             case 8:
                 reminderService.sendReminders();
-                System.out.println(" Reminders sent.");
+                System.out.println("Reminders sent.");
                 return 0;
 
             case 9:
@@ -178,7 +178,7 @@ public class Admin {
                     System.out.println("Logged out successfully.");
                     return 1;
                 } else {
-                    System.out.println("No user is currently logged in.");
+                    System.out.println(" No user is currently logged in.");
                     return 0;
                 }
 
@@ -210,7 +210,7 @@ public class Admin {
 
                 if (foundCDs.isEmpty()) System.out.println("No matching CDs found!");
                 else {
-                    System.out.println("Found CDs:");
+                    System.out.println(" Found CDs:");
                     for (CD c : foundCDs) System.out.println(c);
                 }
                 return 0;

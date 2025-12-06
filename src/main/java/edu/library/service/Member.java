@@ -8,13 +8,11 @@ import java.time.temporal.ChronoUnit;
 import edu.library.model.Book;
 import edu.library.model.CD;
 import edu.library.model.BorrowRecord;
-import edu.library.model.Media;
 import edu.library.model.Roles;
 
 public class Member {
 
     public static String fineFilePath = "fines.txt";
-
 
     public static int handle(Scanner input, MediaService service, AuthService auth, Roles user) {
         System.out.println("\n--- Member Session: " + user.getUsername() + " (" + user.getRoleName() + ") | " + user.getEmail() + " ---");
@@ -54,7 +52,7 @@ public class Member {
             case 9 -> returnCD(input, service, user);
             case 10 -> displayAllCDs(service);
             case 11 -> viewRemainingCDs(service, user);
-            case 12 -> { // Logout
+            case 12 -> {
                 if (auth.logout()) {
                     System.out.println("Logged out successfully.");
                     return 1;
@@ -103,7 +101,7 @@ public class Member {
         }
 
         if (service.borrowBook(bookToBorrow, user.getUsername())) {
-            System.out.println("Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
+            System.out.println(" Book borrowed successfully for 28 days. Due date: " + bookToBorrow.getDueDate());
         } else {
             System.out.println("Could not borrow book.");
         }
@@ -137,11 +135,32 @@ public class Member {
     }
 
     private static void displayAllBooks(MediaService service) {
-        displayMediaList(new ArrayList<>(service.getBooks()));
+        service.getBooks().forEach(System.out::println);
     }
 
     private static void payFines(Scanner input, MediaService service, Roles user) {
-        handleFinePayment(input, service, user.getUsername());
+        int outstanding = service.getOutstandingFine(user.getUsername());
+        if (outstanding == 0) {
+            System.out.println("You have no outstanding fines.");
+            return;
+        }
+        System.out.println("Your outstanding fines: " + outstanding + " NIS.");
+        System.out.print("Enter amount to pay: ");
+        int amt;
+        try {
+            amt = Integer.parseInt(input.nextLine().trim());
+        } catch (Exception e) {
+            System.out.println("Invalid amount.");
+            return;
+        }
+        if (amt <= 0) {
+            System.out.println("Amount must be positive.");
+            return;
+        }
+        if (amt > outstanding) amt = outstanding;
+
+        service.payFine(user.getUsername(), amt);
+        System.out.println("Paid " + amt + " NIS. Remaining fines: " + service.getOutstandingFine(user.getUsername()) + " NIS.");
     }
 
     private static void viewRemainingBooks(MediaService service, Roles user) {
@@ -163,7 +182,6 @@ public class Member {
 
         if (!anyBook) System.out.println("You have no active borrowed books.");
     }
-
 
     private static int searchCD(Scanner input, MediaService service) {
         System.out.print("Enter title/author/ISBN to search: ");
@@ -222,10 +240,36 @@ public class Member {
         if (service.returnCD(cdToReturn, user.getUsername())) {
             System.out.println("CD returned successfully.");
 
-            int outstanding = service.getOutstandingFine(user.getUsername());
+            int outstanding = getOutstandingFineFromFile(user.getUsername());
 
             if (outstanding > 0) {
-                handleFinePayment(input, service, user.getUsername());
+                System.out.println("You have outstanding fines: " + outstanding + " NIS.");
+                System.out.print("Do you want to pay now? (yes/no): ");
+                String payNow = input.nextLine().trim();
+
+                if (payNow.equalsIgnoreCase("yes")) {
+                    System.out.print("Enter amount to pay: ");
+                    int amt;
+                    try {
+                        amt = Integer.parseInt(input.nextLine().trim());
+                    } catch (Exception e) {
+                        System.out.println("Invalid amount.");
+                        return 0;
+                    }
+
+                    if (amt <= 0) {
+                        System.out.println("Amount must be positive.");
+                        return 0;
+                    }
+
+                    if (amt > outstanding) amt = outstanding;
+
+                    service.payFine(user.getUsername(), amt);
+                    updateFineFile(user.getUsername(), amt);
+
+                    outstanding -= amt;
+                    System.out.println("Paid " + amt + " NIS. Remaining fines: " + outstanding + " NIS.");
+                }
             } else {
                 System.out.println("No outstanding fines for this user.");
             }
@@ -237,7 +281,7 @@ public class Member {
     }
 
     private static void displayAllCDs(MediaService service) {
-        displayMediaList(new ArrayList<>(service.getCDs()));
+        service.getCDs().forEach(System.out::println);
     }
 
     private static void viewRemainingCDs(MediaService service, Roles user) {
@@ -246,7 +290,7 @@ public class Member {
 
         for (BorrowRecord record : activeBorrows) {
             CD cd = service.findCDByIsbn(record.getIsbn());
-            if (cd != null) {
+            if (cd != null) { // فقط CDs سيتم التعامل معها
                 anyCD = true;
                 long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), record.getDueDate());
                 if (daysRemaining < 0) {
@@ -261,7 +305,6 @@ public class Member {
             System.out.println("You have no active borrowed CDs.");
         }
     }
-
 
     public static int getOutstandingFineFromFile(String username) {
         File file = new File(fineFilePath);
@@ -323,49 +366,5 @@ public class Member {
         } catch (IOException e) {
             System.out.println("Error writing fine file: " + e.getMessage());
         }
-    }
-
-    private static void displayMediaList(List<? extends Media> mediaList) {
-        if (mediaList.isEmpty()) {
-            System.out.println("No items available.");
-            return;
-        }
-
-        for (Media media : mediaList) {
-            String due = media.getDueDate() != null ? media.getDueDate().toString() : "None";
-            System.out.printf("%s | ISBN: %s | Available: %d/%d | Due: %s%n",
-                    media.getTitle(),
-                    media.getIsbn(),
-                    media.getAvailableCopies(),
-                    media.getTotalCopies(),
-                    due);
-        }
-    }
-
-    private static void handleFinePayment(Scanner input, MediaService service, String username) {
-        int outstanding = service.getOutstandingFine(username);
-        if (outstanding == 0) {
-            System.out.println("You have no outstanding fines.");
-            return;
-        }
-
-        System.out.println("Your outstanding fines: " + outstanding + " NIS.");
-        System.out.print("Enter amount to pay: ");
-        int amt;
-        try {
-            amt = Integer.parseInt(input.nextLine().trim());
-        } catch (Exception e) {
-            System.out.println("Invalid amount.");
-            return;
-        }
-
-        if (amt <= 0) {
-            System.out.println("Amount must be positive.");
-            return;
-        }
-        if (amt > outstanding) amt = outstanding;
-
-        service.payFine(username, amt);
-        System.out.println("Paid " + amt + " NIS. Remaining fines: " + service.getOutstandingFine(username) + " NIS.");
     }
 }

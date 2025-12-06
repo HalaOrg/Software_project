@@ -14,7 +14,6 @@ import edu.library.service.ReminderService;
 import edu.library.notification.EmailNotifier;
 import edu.library.notification.SmtpEmailServer;
 import edu.library.time.SystemTimeProvider;
-
 import java.util.Scanner;
 
 public class Main {
@@ -30,7 +29,8 @@ public class Main {
                 new FineCalculator()
         );
 
-        service.updateFinesOnStartup();
+     //   service.updateFinesOnStartup();
+
 
         AuthService auth = new AuthService(fineService);;
         ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
@@ -137,7 +137,6 @@ public class Main {
         }
         return null;
     }
-
 
 
 }

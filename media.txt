@@ -1,6 +1,4 @@
-BOOK;رواية بينما ينام العالم;سوزان أبو الهوى;R100;٣;٣;null
-BOOK;فن اللامبالاة;مارك مانسون;R200;١;١;null
-BOOK;رحلة الى السماء السابعة;علي بن جابر;R300;٥;٥;null
-CD;music;nerv;C100;٤;٤;null
-CD;القرآن الكريم;-;C200;٦;٦;null
-CD;java course;haya samm;C300;٩;٩;null
+BOOK;book1;book1;1111;٧;٧;null
+BOOK;book2;book2;2222;٣;٢;2026-01-03
+CD;cd1;cd1;0000;٥;٤;2025-12-13
+BOOK;book3;book3;9999;١;١;null

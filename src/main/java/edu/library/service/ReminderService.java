@@ -4,7 +4,7 @@ import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 import edu.library.notification.EmailNotifier;
 import edu.library.notification.EmailServer;
-import edu.library.notification.Observer;        // ← المهم!
+import edu.library.notification.Observer;
 import edu.library.notification.SmtpEmailServer;
 import edu.library.time.TimeProvider;
 
