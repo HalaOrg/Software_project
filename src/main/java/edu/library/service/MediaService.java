@@ -49,36 +49,65 @@ public class MediaService {
                         FineService fineService) {
         this(filePath, borrowRecordService, fineService, new SystemTimeProvider(), new FineCalculator());
     }
-
-
     private void loadMediaFromFile(String filename) {
         File file = new File(filename);
         if (!file.exists()) return;
 
-        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+        items.clear();
 
+        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
             String line;
             while ((line = br.readLine()) != null) {
-                String[] parts = line.split(";");
 
-                if (parts.length == 7) {
-                    String type = parts[0];
-                    String title = parts[1];
-                    String author = parts[2];
-                    String isbn = parts[3];
-                    int total = Integer.parseInt(parts[4]);
-                    int available = Integer.parseInt(parts[5]);
-                    LocalDate dueDate = parts[6].equals("null") ? null : LocalDate.parse(parts[6]);
+                line = line.trim();
+                // تجاهل الأسطر الفاضية
+                if (line.isEmpty()) {
+                    continue;
+                }
 
-                    Media m;
+                String[] parts = line.split(";", -1);
+                if (parts.length != 7) {
+                    // سطر مش على الشكل الصحيح → تجاهله
+                    continue;
+                }
 
-                    if (type.equalsIgnoreCase("BOOK")) {
-                        m = new Book(title, author, isbn, available, total);
-                    } else {
-                        m = new CD(title, author, isbn, available, total);
-                    }
+                String type   = parts[0];
+                String title  = parts[1];
+                String author = parts[2];
+                String isbn   = parts[3];
 
-                    m.setDueDate(dueDate);
+                int total;
+                int available;
+                try {
+                    total     = Integer.parseInt(parts[4].trim());
+                    available = Integer.parseInt(parts[5].trim());
+                } catch (NumberFormatException e) {
+                    // لو الأرقام خربانة ما نطيّر البرنامج كله
+                    continue;
+                }
+
+                LocalDate dueDate = null;
+                String dueRaw = parts[6].trim();
+                if (!dueRaw.equalsIgnoreCase("null") && !dueRaw.isBlank()) {
+                    dueDate = LocalDate.parse(dueRaw);
+                }
+
+                Media m = null;
+
+                if (type.equalsIgnoreCase("BOOK")) {
+                    // نستخدم الكونستركتور اللي ياخذ total فقط
+                    Book b = new Book(title, author, isbn, total);
+                    b.setAvailableCopies(available);
+                    b.setDueDate(dueDate);
+                    m = b;
+                } else if (type.equalsIgnoreCase("CD")) {
+                    CD cd = new CD(title, author, isbn, total);
+                    cd.setAvailableCopies(available);
+                    cd.setDueDate(dueDate);
+                    m = cd;
+                }
+
+                if (m != null) {
                     items.add(m);
                 }
             }
@@ -87,6 +116,8 @@ public class MediaService {
             System.out.println("Error loading media: " + e.getMessage());
         }
     }
+
+
 
     public void saveAllMediaToFile() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
