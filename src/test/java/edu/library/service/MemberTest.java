@@ -28,7 +28,7 @@ class MemberTest {
     @TempDir
     Path tempDir;
 
-    private File fineFile;
+    private Path fineFile;
     private Path borrowFile;
 
     @BeforeEach
@@ -39,13 +39,14 @@ class MemberTest {
         borrowFile = tempDir.resolve("borrow_records_test.txt");
         Files.createFile(borrowFile);
 
-        fineFile = File.createTempFile("fines", ".txt");
-        fineFile.deleteOnExit();
+        // Direct fines storage into the per-test temp directory to avoid touching real files.
+        fineFile = tempDir.resolve("fines_test.txt");
+        Files.createFile(fineFile);
 
         BorrowRecordService borrowRecordService =
                 new BorrowRecordService(borrowFile.toString());
 
-        FineService fineService = new FineService();
+        FineService fineService = new FineService(fineFile.toString());
         TimeProvider timeProvider = mock(TimeProvider.class);
         when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 3));
 
@@ -61,7 +62,7 @@ class MemberTest {
         user = new Roles("testuser", "Test User", "test@example.com", "Member");
         when(auth.logout()).thenReturn(true);
 
-        Member.fineFilePath = fineFile.getAbsolutePath();
+        Member.fineFilePath = fineFile.toString();
 
         service.addMedia(new Book("Java Programming", "Author A", "ISBN001", 1));
         service.addMedia(new Book("Python Basics", "Author B", "ISBN002", 1));
@@ -71,7 +72,7 @@ class MemberTest {
 
     @AfterEach
     void cleanup() throws IOException {
-        if (fineFile != null) Files.deleteIfExists(fineFile.toPath());
+        if (fineFile != null) Files.deleteIfExists(fineFile);
         if (borrowFile != null) Files.deleteIfExists(borrowFile);
     }
 
@@ -85,7 +86,7 @@ class MemberTest {
     }
 
     private void writeFine(String username, int amount) throws IOException {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(fineFile))) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(fineFile.toFile()))) {
             bw.write(username + "," + amount);
         }
     }

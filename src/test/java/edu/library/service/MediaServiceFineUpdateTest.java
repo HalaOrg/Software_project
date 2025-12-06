@@ -1,6 +1,7 @@
 package edu.library.service;
 
 import edu.library.fine.FineCalculator;
+import edu.library.model.Book;
 import edu.library.model.BorrowRecord;
 import edu.library.time.TimeProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,10 @@ class MediaServiceFineUpdateTest {
 
     @Test
     void updateFinesOnStartupAddsMissingBalanceForOverdueRecords() {
+        // Use in-memory files in the temp directory to avoid touching real data.
+        Book overdueBook = new Book("Sample", "Author", "ISBN-123", 1, 1);
+        mediaService.addMedia(overdueBook);
+
         BorrowRecord overdueRecord = new BorrowRecord(
                 "bob",
                 "ISBN-123",

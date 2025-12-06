@@ -169,6 +169,16 @@ public class MediaService {
         }
 
 
+        // Prevent borrowing when the user already has an overdue active record.
+        LocalDate today = timeProvider.today();
+        for (BorrowRecord record : borrowRecordService.getActiveBorrowRecordsForUser(username)) {
+            if (record.getDueDate() != null && today != null && today.isAfter(record.getDueDate())) {
+                System.out.println("Cannot borrow with overdue items.");
+                return false;
+            }
+        }
+
+
         LocalDate dueDate = timeProvider.today().plusDays(m.getBorrowDurationDays());
 
 
