@@ -86,18 +86,18 @@ public class SmtpEmailServer implements EmailServer {
         private final String password;
         private final String fromAddress;
 
-        public SmtpEmailSettings() {
+      public SmtpEmailSettings() {
             this(
                     "smtp.gmail.com",
                     587,
                     true,
-                    "halaeid807@gmail.com",
-                    "dbfi wpfj vrci lifr",
-                    "halaeid807@gmail.com"
+                    "alaasawalhh14@gmail.com",
+                    "gqpy otpj tlfb uwfe",
+                    "alaasawalhh14@gmail.com"
             );
         }
 
-
+ 
         public SmtpEmailSettings(String host, int port, boolean startTls, String username, String password, String fromAddress) {
             this.host = host;
             this.port = port;
