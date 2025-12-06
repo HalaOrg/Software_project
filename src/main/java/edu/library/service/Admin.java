@@ -8,9 +8,11 @@ import edu.library.model.Roles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-
 public class Admin {
 
+    private Admin() {
+        // prevent instantiation
+    }
     public static int handle(Scanner input,
                              MediaService service,
                              AuthService auth,
