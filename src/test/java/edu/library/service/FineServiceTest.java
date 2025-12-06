@@ -1,5 +1,6 @@
 package edu.library.service;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -21,11 +22,20 @@ public class FineServiceTest {
 
     private Path finesFile;
     private FineService fineService;
+    private String originalUserDir;
 
     @BeforeEach
     void setUp() {
+        // Keep all file writes inside the temp directory so real project files are untouched.
+        originalUserDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
         finesFile = tempDir.resolve("fines.txt");
         fineService = Mockito.spy(new FineService(finesFile.toString()));
+    }
+
+    @AfterEach
+    void tearDown() {
+        System.setProperty("user.dir", originalUserDir);
     }
 
     @Test

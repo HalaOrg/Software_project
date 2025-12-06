@@ -52,6 +52,7 @@ class BookServiceRestrictionsTest {
         Book book = new Book("Overdue Book", "Author", "B-1", 1, 1);
         mediaService.addMedia(book);
 
+        // Active overdue record (due date before today) should block new borrows.
         BorrowRecord overdue = new BorrowRecord("alice", book.getIsbn(), LocalDate.of(2024, 1, 1), false, null);
         borrowRecordService.addBorrowRecord(overdue);
 

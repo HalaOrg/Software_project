@@ -31,15 +31,24 @@ class MediaServiceTest {
     Path tempDir;
 
     private Path mediaFile;
+    private Path finesFile;
+    private Path borrowFile;
 
     @BeforeEach
     void setUp() throws Exception {
-        borrowRecordService = new BorrowRecordService();
-        fineService = new FineService();
-        timeProvider = mock(TimeProvider.class);
-
+        // Use per-test temp files so the real project data files are never touched.
         mediaFile = tempDir.resolve("media_test.txt");
+        finesFile = tempDir.resolve("fines_test.txt");
+        borrowFile = tempDir.resolve("borrow_records_test.txt");
+
         Files.createFile(mediaFile);
+        Files.createFile(finesFile);
+        Files.createFile(borrowFile);
+
+        borrowRecordService = new BorrowRecordService(borrowFile.toString());
+        fineService = new FineService(finesFile.toString());
+        timeProvider = mock(TimeProvider.class);
+        when(timeProvider.today()).thenReturn(LocalDate.now());
 
         mediaService = new MediaService(
                 mediaFile.toString(),
@@ -119,10 +128,12 @@ class MediaServiceTest {
 
         assertTrue(mediaService.borrowBook(book, "user1"));
 
+        BorrowRecordService reloadedBorrow = new BorrowRecordService(borrowFile.toString());
+        FineService reloadedFineService = new FineService(finesFile.toString());
         MediaService reloadedService = new MediaService(
                 mediaFile.toString(),
-                borrowRecordService,
-                fineService,
+                reloadedBorrow,
+                reloadedFineService,
                 timeProvider,
                 new FineCalculator()
         );
