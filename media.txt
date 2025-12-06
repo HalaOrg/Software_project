@@ -1,4 +1,5 @@
 BOOK;book1;book1;1111;٧;٧;null
 BOOK;book2;book2;2222;٣;٢;2026-01-03
-CD;cd1;cd1;0000;٥;٤;2025-12-13
+CD;cd1;cd1;0000;٥;٣;2025-12-13
 BOOK;book3;book3;9999;١;١;null
+BOOK;Book test;auth;R111;٥;٤;2026-01-03

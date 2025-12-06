@@ -1,4 +1,4 @@
-package edu.library;
+package edu.library.service;
 
 import edu.library.fine.FineCalculator;
 import edu.library.model.Book;

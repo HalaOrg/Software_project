@@ -1,11 +1,7 @@
-package edu.library;
+package edu.library.service;
 
 import edu.library.fine.FineCalculator;
-import edu.library.model.Book;
 import edu.library.model.BorrowRecord;
-import edu.library.service.BorrowRecordService;
-import edu.library.service.FineService;
-import edu.library.service.MediaService;
 import edu.library.time.TimeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,13 +11,13 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class BookServiceRestrictionsTest {
+class MediaServiceFineUpdateTest {
 
     private MediaService mediaService;
+    private FineService fineService;
     private BorrowRecordService borrowRecordService;
     private TimeProvider timeProvider;
 
@@ -29,13 +25,13 @@ class BookServiceRestrictionsTest {
     Path tempDir;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void setUp() {
         Path mediaFile = tempDir.resolve("media.txt");
         Path borrowRecordsFile = tempDir.resolve("borrow_records.txt");
         Path finesFile = tempDir.resolve("fines.txt");
 
+        fineService = new FineService(finesFile.toString());
         borrowRecordService = new BorrowRecordService(borrowRecordsFile.toString());
-        FineService fineService = new FineService(finesFile.toString());
         timeProvider = mock(TimeProvider.class);
 
         mediaService = new MediaService(
@@ -48,16 +44,22 @@ class BookServiceRestrictionsTest {
     }
 
     @Test
-    void borrowFailsWhenUserHasOverdueRecord() {
-        Book book = new Book("Overdue Book", "Author", "B-1", 1, 1);
-        mediaService.addMedia(book);
+    void updateFinesOnStartupAddsMissingBalanceForOverdueRecords() {
+        BorrowRecord overdueRecord = new BorrowRecord(
+                "bob",
+                "ISBN-123",
+                LocalDate.of(2024, 1, 1),
+                false,
+                null
+        );
+        borrowRecordService.addBorrowRecord(overdueRecord);
+        fineService.addFine("bob", 5);
 
-        BorrowRecord overdue = new BorrowRecord("alice", book.getIsbn(), LocalDate.of(2024, 1, 1), false, null);
-        borrowRecordService.addBorrowRecord(overdue);
+        when(timeProvider.today()).thenReturn(LocalDate.of(2024, 1, 3));
 
-        when(timeProvider.today()).thenReturn(LocalDate.of(2024, 2, 1));
+        mediaService.updateFinesOnStartup();
 
-        assertFalse(mediaService.borrowBook(book, "alice"));
-        assertEquals(1, book.getAvailableCopies());
+        // Overdue by 2 days => 20 total fine for books. Previously 5, so new balance should be 20.
+        assertEquals(20, fineService.getBalance("bob"));
     }
 }

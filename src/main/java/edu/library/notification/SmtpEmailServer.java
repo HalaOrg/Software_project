@@ -91,9 +91,9 @@ public class SmtpEmailServer implements EmailServer {
                     "smtp.gmail.com",
                     587,
                     true,
-                    "alaasawalhh14@gmail.com",
-                    "gqpy otpj tlfb uwfe",
-                    "alaasawalhh14@gmail.com"
+                    "halaeid807@gmail.com",
+                    "dbfi wpfj vrci lifr",
+                    "halaeid807@gmail.com"
             );
         }
 

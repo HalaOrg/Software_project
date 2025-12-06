@@ -29,8 +29,7 @@ public class Main {
                 new FineCalculator()
         );
 
-     //   service.updateFinesOnStartup();
-
+        service.updateFinesOnStartup();
 
         AuthService auth = new AuthService(fineService);;
         ReminderService reminderService = new ReminderService(borrowRecordService, auth, new edu.library.time.SystemTimeProvider());
