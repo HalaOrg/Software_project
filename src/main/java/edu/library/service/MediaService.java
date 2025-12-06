@@ -200,8 +200,14 @@ public class MediaService {
 
         if (returnDate.isAfter(originalDue)) {
             int overdueDays = (int) ChronoUnit.DAYS.between(originalDue, returnDate);
-            int fine = overdueDays * m.getDailyFine();
-            fineService.addFine(username, fine);
+            int ratePerDay = (m instanceof Book) ? 10 : (m instanceof CD) ? 20 : 0;
+            int fineAmount = overdueDays * ratePerDay;
+            int currentBalance = fineService.getBalance(username);
+
+            if (fineAmount > currentBalance) {
+                int diff = fineAmount - currentBalance;
+                fineService.addFine(username, diff);
+            }
         }
 
         return true;
@@ -299,9 +305,6 @@ public class MediaService {
         return active;
     }
 
-    // -----------------------------
-    // CD Methods
-    // -----------------------------
     public List<CD> searchCD(String keyword) {
         List<CD> result = new ArrayList<>();
         if (keyword == null || keyword.isBlank()) return result;
@@ -350,5 +353,56 @@ public class MediaService {
             );
         }
     }
+    public void updateFinesOnStartup() {
+
+        LocalDate today = timeProvider.today();
+
+        Map<String, Integer> recalculatedFines = new HashMap<>();
+
+        for (BorrowRecord record : borrowRecordService.getRecords()) {
+
+            if (record.isReturned()
+                    || record.getDueDate() == null
+                    || !today.isAfter(record.getDueDate())) {
+                continue;
+            }
+
+            Media media = findByIsbn(record.getIsbn());
+            if (media == null) {
+                continue;
+            }
+
+            int overdueDays = (int) ChronoUnit.DAYS.between(
+                    record.getDueDate(),
+                    today
+            );
+
+            int ratePerDay;
+            if (media instanceof Book) {
+                ratePerDay = 10;   // book rate (10/day)
+            } else if (media instanceof CD) {
+                ratePerDay = 20;   // CD rate (20/day)
+            } else {
+                continue;
+            }
+
+            int newFineAmount = overdueDays * ratePerDay;
+
+            String username = record.getUsername();
+            recalculatedFines.merge(username, newFineAmount, Integer::sum);
+        }
+
+        for (Map.Entry<String, Integer> entry : recalculatedFines.entrySet()) {
+            String username = entry.getKey();
+            int recalculatedTotal = entry.getValue();
+            int currentBalance = fineService.getBalance(username);
+
+            if (recalculatedTotal > currentBalance) {
+                int diff = recalculatedTotal - currentBalance;
+                fineService.addFine(username, diff);
+            }
+        }
+    }
+
 
 }
