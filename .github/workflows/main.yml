@@ -37,3 +37,5 @@ jobs:
         run: |
           mvn -B clean verify
           mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
