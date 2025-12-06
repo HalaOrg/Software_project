@@ -7,39 +7,45 @@
     <groupId>edu.library</groupId>
     <artifactId>Library-Management-System</artifactId>
     <version>1.0-SNAPSHOT</version>
+
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-    
-         <sonar.organization>halaorg</sonar.organization>
-          <sonar.projectKey>HalaOrg_Software_project</sonar.projectKey>
-         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-         <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 
-</properties>
-         
+        <!-- إعدادات SonarCloud -->
+        <sonar.organization>halaorg</sonar.organization>
+        <sonar.projectKey>HalaOrg_Software_project</sonar.projectKey>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+
+        <!-- مهم جداً: مسار تقرير Jacoco بصيغة XML -->
+        <sonar.coverage.jacoco.xmlReportPaths>
+            ${project.basedir}/target/site/jacoco/jacoco.xml
+        </sonar.coverage.jacoco.xmlReportPaths>
+    </properties>
+
     <dependencies>
+        <!-- JUnit 5 API -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <version>5.10.0</version>
             <scope>test</scope>
         </dependency>
-
+        <!-- JUnit 5 Engine -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>5.10.0</version>
             <scope>test</scope>
         </dependency>
-
+        <!-- Mockito -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>5.12.0</version>
             <scope>test</scope>
         </dependency>
-
+        <!-- Mail -->
         <dependency>
             <groupId>com.sun.mail</groupId>
             <artifactId>jakarta.mail</artifactId>
@@ -47,42 +53,40 @@
         </dependency>
     </dependencies>
 
-<build>
-    <plugins>
+    <build>
+        <plugins>
+            <!-- Jacoco لتغطية الكود -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.11</version>
+                <executions>
+                    <!-- يحقن الـ agent قبل التستات -->
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
 
-        <!-- Jacoco plugin -->
-        <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.11</version>
+                    <!-- يطلع تقرير XML بعد verify -->
+                    <execution>
+                        <id>generate-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>prepare-agent</goal>
-                    </goals>
-                </execution>
-
-                <execution>
-                    <id>generate-report</id>
-                    <phase>verify</phase>
-                    <goals>
-                        <goal>report</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
-
-        <!-- Required for JUnit 5 -->
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>3.0.0-M7</version>
-        </plugin>
-
-    </plugins>
-</build>
-
-
+            <!-- Surefire لتشغيل JUnit 5 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M7</version>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
+
