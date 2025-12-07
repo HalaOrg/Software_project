@@ -188,4 +188,63 @@ public class FineServiceTest {
     }
 
 
+    @Test
+    void testSave_filePathParentIsNull_noException() {
+        FineService service = new FineService(Path.of("fines_no_parent.txt"));
+        service.addFine("user", 10);
+        assertDoesNotThrow(service::save);
+    }
+
+
+
+    @Test
+    void testResolveDefault_returnsValidPath() {
+        String path = FineService.resolveDefault("testfile.txt");
+        assertTrue(path.endsWith("testfile.txt"));
+    }
+
+    @Test
+    void testPayFine_attemptsToOverpay() {
+        FineService service = new FineService(tempDir.resolve("f.txt").toString());
+        service.addFine("user", 10);
+
+        int remaining = service.payFine("user", 20);
+        assertEquals(0, remaining);
+        assertEquals(0, service.getBalance("user"));
+    }
+
+    @Test
+    void testAddFine_withNonPositiveAmountAndNullUsername() {
+        FineService service = new FineService(tempDir.resolve("f.txt").toString());
+        service.addFine(null, 10);
+        service.addFine("user", 0);
+        service.addFine("user2", -5);
+
+        assertEquals(0, service.getBalance(null));
+        assertEquals(0, service.getBalance("user"));
+        assertEquals(0, service.getBalance("user2"));
+    }
+
+    @Test
+    void testStoreBalanceOnLogin_withZeroBalanceDoesNotSave() {
+        FineService service = spy(new FineService(tempDir.resolve("f.txt").toString()));
+        doReturn(0).when(service).getBalance("user0");
+        service.storeBalanceOnLogin("user0");
+        verify(service, never()).save();
+    }
+
+    @Test
+    void testStoreBalanceOnLogin_withPositiveBalanceSaves() {
+        FineService service = spy(new FineService(tempDir.resolve("f.txt").toString()));
+        doReturn(50).when(service).getBalance("user1");
+        service.storeBalanceOnLogin("user1");
+        verify(service, times(1)).save();
+    }
+
+    @Test
+    void testStoreBalanceOnLogin_withNullUsernameDoesNothing() {
+        FineService service = spy(new FineService(tempDir.resolve("f.txt").toString()));
+        service.storeBalanceOnLogin(null);
+        verify(service, never()).save();
+    }
 }
