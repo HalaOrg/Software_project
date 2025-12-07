@@ -179,5 +179,14 @@ public class BorrowRecordService {
         records.add(record);
         appendRecord(record);
     }
+    // إضافة سجل استعارة جديد
+    public void addBorrowRecord(String username, String isbn) {
+        if (username == null || isbn == null || username.isBlank() || isbn.isBlank()) return;
+
+        LocalDate dueDate = LocalDate.now().plusDays(14); // مهلة استعارة 14 يوم
+        BorrowRecord record = new BorrowRecord(username, isbn, dueDate, false, null);
+        records.add(record);
+    }
+
 
 }

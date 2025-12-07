@@ -1,2 +1,3 @@
 leen,0
+user1,30
 remah,30

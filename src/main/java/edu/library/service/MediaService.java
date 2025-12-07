@@ -479,4 +479,14 @@ public class MediaService {
         }
     }
 
+    public void addBook(String title, String author, String isbn, int totalCopies) {
+        if (title == null || title.isBlank() || isbn == null || isbn.isBlank()) return;
+
+        Book newBook = new Book(title, author, isbn, totalCopies);
+        newBook.setAvailableCopies(totalCopies); // كل النسخ متاحة أولاً
+        items.add(newBook);
+
+        saveAllMediaToFile(); // تحفظ التغييرات في الملف
+    }
+
 }
