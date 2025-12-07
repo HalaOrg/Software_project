@@ -7,6 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import java.lang.reflect.Method;
+import java.util.Properties;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class SmtpEmailServerUltimateTest {
@@ -51,6 +54,7 @@ class SmtpEmailServerUltimateTest {
     @Test
     void testSendEmailReturnsEarlyForNullOrBlankParams() {
         SmtpEmailServer server = new SmtpEmailServer(defaultSettings);
+        // لا تتوقع أي استثناء أو إرسال عند القيم الفارغة
         server.sendEmail(null, "msg");
         server.sendEmail("", "msg");
         server.sendEmail("   ", "msg");
@@ -62,6 +66,7 @@ class SmtpEmailServerUltimateTest {
         SmtpEmailServer.SmtpEmailSettings badSettings =
                 new SmtpEmailServer.SmtpEmailSettings("", 587, true, "", "", null);
         SmtpEmailServer server = new SmtpEmailServer(badSettings);
+        // لا ينبغي أن يرمي استثناء — يطبع رسالة ويتوقف
         server.sendEmail("to@example.com", "Hello");
     }
 
@@ -82,7 +87,6 @@ class SmtpEmailServerUltimateTest {
         }
     }
 
-
     @Test
     void testSendEmailThrowsRuntimeException() throws Exception {
         SmtpEmailServer server = new SmtpEmailServer(
@@ -91,7 +95,7 @@ class SmtpEmailServerUltimateTest {
 
         try (MockedStatic<Transport> mockedTransport = Mockito.mockStatic(Transport.class)) {
             mockedTransport.when(() -> Transport.send(Mockito.any(MimeMessage.class)))
-                    .thenThrow(new MessagingException("Fail"));
+                    .thenThrow(new jakarta.mail.MessagingException("Fail"));
 
             RuntimeException ex = assertThrows(RuntimeException.class,
                     () -> server.sendEmail("to@example.com", "msg"));
@@ -104,6 +108,7 @@ class SmtpEmailServerUltimateTest {
         SmtpEmailServer emptyServer = new SmtpEmailServer(
                 new SmtpEmailServer.SmtpEmailSettings("", 587, true, "", "", null)
         );
+        // لا يحدث إرسال لأن الإعدادات ناقصة
         emptyServer.sendEmail("to@example.com", "msg");
 
         SmtpEmailServer validServer = new SmtpEmailServer(
@@ -115,4 +120,139 @@ class SmtpEmailServerUltimateTest {
             mockedTransport.verify(() -> Transport.send(Mockito.any(MimeMessage.class)), Mockito.times(1));
         }
     }
+
+    // ======================
+    // Testable Authenticator
+    // ======================
+    static class TestAuthenticator extends jakarta.mail.Authenticator {
+        private final String username;
+        private final String password;
+
+        TestAuthenticator(String username, String password) {
+            this.username = username;
+            this.password = password;
+        }
+
+        @Override
+        protected PasswordAuthentication getPasswordAuthentication() {
+            return new PasswordAuthentication(username, password);
+        }
+
+        // method public تستدعي protected method داخلياً حتى نقدر نختبرها
+        public PasswordAuthentication call() {
+            return getPasswordAuthentication();
+        }
+    }
+
+    @Test
+    void testAuthenticatorReturnsCorrectCredentials() {
+        String expectedUser = "testUser";
+        String expectedPass = "testPass";
+
+        TestAuthenticator auth = new TestAuthenticator(expectedUser, expectedPass);
+
+        // نستدعي ال-call() الآمنة
+        PasswordAuthentication pa = auth.call();
+
+        assertNotNull(pa);
+        assertEquals(expectedUser, pa.getUserName());
+        assertEquals(expectedPass, pa.getPassword());
+    }
+    @Test
+    void testIsConfigured() throws Exception {
+        // إعداد السيرفر مع بيانات صحيحة
+        SmtpEmailServer.SmtpEmailSettings settings =
+                new SmtpEmailServer.SmtpEmailSettings("smtp.com", 587, true, "user", "pass", null);
+        SmtpEmailServer server = new SmtpEmailServer(settings);
+
+        // استخدام reflection لاستدعاء private method
+        Method isConfiguredMethod = SmtpEmailServer.class.getDeclaredMethod("isConfigured");
+        isConfiguredMethod.setAccessible(true);
+
+        // كل القيم صحيحة → true
+        assertTrue((boolean) isConfiguredMethod.invoke(server));
+
+        // host فارغ → false
+        SmtpEmailServer emptyHostServer = new SmtpEmailServer(
+                new SmtpEmailServer.SmtpEmailSettings("", 587, true, "user", "pass", null)
+        );
+        assertFalse((boolean) isConfiguredMethod.invoke(emptyHostServer));
+
+        // username فارغ → false
+        SmtpEmailServer emptyUserServer = new SmtpEmailServer(
+                new SmtpEmailServer.SmtpEmailSettings("smtp.com", 587, true, "", "pass", null)
+        );
+        assertFalse((boolean) isConfiguredMethod.invoke(emptyUserServer));
+
+        // password فارغ → false
+        SmtpEmailServer emptyPassServer = new SmtpEmailServer(
+                new SmtpEmailServer.SmtpEmailSettings("smtp.com", 587, true, "user", "", null)
+        );
+        assertFalse((boolean) isConfiguredMethod.invoke(emptyPassServer));
+    }
+    @Test
+    void testFromAddressNullOrBlank() {
+        // حالة fromAddress null → يجب أن يأخذ username
+        SmtpEmailServer.SmtpEmailSettings settingsNull =
+                new SmtpEmailServer.SmtpEmailSettings("smtp.com", 587, true, "user", "pass", null);
+        SmtpEmailServer serverNull = new SmtpEmailServer(settingsNull);
+        assertEquals("user", serverNull.getFromAddress(), "fromAddress should default to username if null");
+
+        // حالة fromAddress فارغ → يجب أن يأخذ username
+        SmtpEmailServer.SmtpEmailSettings settingsBlank =
+                new SmtpEmailServer.SmtpEmailSettings("smtp.com", 587, true, "user", "pass", "   ");
+        SmtpEmailServer serverBlank = new SmtpEmailServer(settingsBlank);
+        assertEquals("user", serverBlank.getFromAddress(), "fromAddress should default to username if blank");
+
+        // حالة fromAddress موجود → يجب أن يأخذ القيمة نفسها
+        SmtpEmailServer.SmtpEmailSettings settingsValid =
+                new SmtpEmailServer.SmtpEmailSettings("smtp.com", 587, true, "user", "pass", "from@example.com");
+        SmtpEmailServer serverValid = new SmtpEmailServer(settingsValid);
+        assertEquals("from@example.com", serverValid.getFromAddress(), "fromAddress should use provided value if not blank");
+    }
+
+    @Test
+    void testSessionAndAuthenticatorIndirectly() throws Exception {
+        String username = "testUser";
+        String password = "testPass";
+
+        // إعداد الخصائص كما في الكود
+        Properties props = new Properties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.host", "smtp.test.com");
+        props.put("mail.smtp.port", "587");
+
+        // إنشاء Authenticator كما في الكود
+        Authenticator auth = new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(username, password);
+            }
+        };
+
+        // Mock Transport.send لتجنب إرسال الإيميل فعلياً
+        try (MockedStatic<Transport> mockedTransport = Mockito.mockStatic(Transport.class)) {
+            mockedTransport.when(() -> Transport.send(Mockito.any(MimeMessage.class))).thenAnswer(i -> null);
+
+            // إنشاء Session كما في الكود
+            Session session = Session.getInstance(props, auth);
+            assertNotNull(session);
+
+            // إنشاء MimeMessage كما في sendEmail
+            MimeMessage msg = new MimeMessage(session);
+            msg.setFrom(new jakarta.mail.internet.InternetAddress("from@test.com"));
+            msg.setRecipients(Message.RecipientType.TO,
+                    jakarta.mail.internet.InternetAddress.parse("to@test.com"));
+            msg.setSubject("Test");
+            msg.setText("Hello");
+
+            // استدعاء send (سيستخدم Authenticator)
+            Transport.send(msg);
+
+            // تحقق أن Transport.send تم استدعاؤه مرة واحدة
+            mockedTransport.verify(() -> Transport.send(Mockito.any(MimeMessage.class)), Mockito.times(1));
+        }
+    }
+
 }

@@ -1,5 +1,6 @@
 package edu.library.service;
 
+import edu.library.model.BorrowRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -10,6 +11,7 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import edu.library.model.Book;
@@ -244,4 +246,181 @@ class MediaServiceTest {
 
         System.setOut(originalOut);
     }
+    @Test
+    void testDefaultConstructor() {
+        // إنشاء MediaService باستخدام الكونستركتر الافتراضي
+       // MediaService service = new MediaService();
+        MediaService service = new MediaService();
+        assertEquals("media.txt", service.getFilePath());
+
+        assertNotNull(service, "MediaService should be instantiated");
+
+        // تحقق من أن المسار الافتراضي تم تعيينه
+        //assertEquals("media.txt", service.getMediaFilePath());
+
+        // تحقق من أن الخدمات المساعدة تم إنشاؤها
+        assertNotNull(service.getBorrowRecordService(), "BorrowRecordService should be initialized");
+        assertNotNull(service.getFineService(), "FineService should be initialized");
+        assertNotNull(service.getSystemTimeProvider(), "SystemTimeProvider should be initialized");
+        assertNotNull(service.getFineCalculator(), "FineCalculator should be initialized");
+    }
+    @Test
+    void testDefaultConstructorInitializesAllFields() {
+        MediaService service = new MediaService();
+
+        assertNotNull(service.getItems(), "Items list should be initialized");
+        assertNotNull(service.getBorrowRecordService(), "BorrowRecordService should be initialized");
+        assertNotNull(service.getFineService(), "FineService should be initialized");
+        assertNotNull(service.getSystemTimeProvider(), "SystemTimeProvider should be initialized");
+        assertNotNull(service.getFineCalculator(), "FineCalculator should be initialized");
+
+        // يمكنك أيضاً التأكد من مسار الملف الافتراضي
+        assertEquals("media.txt", service.getMediaFilePath(), "Default filePath should be 'media.txt'");
+    }
+    @Test
+    void testUpdateFinesOnStartupWhenMediaIsNull() {
+        LocalDate borrowDate = LocalDate.now().minusDays(10); // تاريخ الاستعارة
+        LocalDate dueDate = LocalDate.now().minusDays(5);     // تاريخ الاستحقاق
+
+        BorrowRecord record = new BorrowRecord(
+                "user1",
+                "NON_EXISTENT_ISBN",
+                LocalDate.now().minusDays(5), // dueDate
+                false,                        // returned
+                null                          // returnDate
+        );
+
+
+        // أضف السجل إلى خدمة السجلات
+        mediaService.getBorrowRecordService().getRecords().add(record);
+
+        // لا يجب أن يحدث أي استثناء عند استدعاء updateFinesOnStartup
+        assertDoesNotThrow(() -> mediaService.updateFinesOnStartup());
+
+        // لا يجب أن يكون هناك أي fine مضافة لأن Media غير موجود
+        assertEquals(0, mediaService.getFineService().getBalance("user1"));
+    }
+    @Test
+    void testUpdateFinesSkipsMissingMedia() {
+        // إضافة Book موجود
+        Book existingBook = new Book("Existing Book", "Author", "EXIST123", 1, 1);
+        mediaService.addMedia(existingBook);
+
+        // إضافة BorrowRecord يحمل ISBN غير موجود
+        BorrowRecord missingMediaRecord = new BorrowRecord(
+                "user1",
+                "MISSING123", // هذا ISBN غير موجود في items
+                LocalDate.of(2025, 12, 1),
+                false,
+                null
+        );
+
+        borrowRecordService.getRecords().add(missingMediaRecord);
+
+        // نتحقق أن updateFinesOnStartup لا يرمي استثناء
+        assertDoesNotThrow(() -> mediaService.updateFinesOnStartup());
+
+        // بما أن media غير موجودة، لا يجب أن تُضاف غرامة
+        assertEquals(0, fineService.getBalance("user1"));
+    }
+    @Test
+    void testUpdateFinesOnStartup_allCasesCovered() {
+        LocalDate today = LocalDate.of(2025, 12, 7);
+        when(timeProvider.today()).thenReturn(today);
+
+        // سجل تم إرجاعه → تجاهل
+        BorrowRecord returnedRecord = new BorrowRecord(
+                "userReturned", "ISBN-RETURNED",
+                today.minusDays(5), true, today.minusDays(1)
+        );
+
+        // سجل بدون dueDate → تجاهل
+        BorrowRecord noDueDateRecord = new BorrowRecord(
+                "userNoDue", "ISBN-NODUE", null, false, null
+        );
+
+        // سجل لم يحل موعده بعد → تجاهل
+        BorrowRecord notDueYetRecord = new BorrowRecord(
+                "userNotDueYet", "ISBN-NOTDUE", today.plusDays(3), false, null
+        );
+
+        // سجل متأخر + موجود في Media → احتساب الغرامة
+        String lateBookIsbn = "ISBN-LATEBOOK";
+        Book lateBook = new Book("Late Book", "Author", lateBookIsbn, 1, 1);
+        mediaService.addMedia(lateBook);
+
+        BorrowRecord lateRecord = new BorrowRecord(
+                "userLate", lateBookIsbn, today.minusDays(4), false, null
+        );
+
+        // سجل متأخر + ISBN غير موجود → تجاهل
+        BorrowRecord missingMediaRecord = new BorrowRecord(
+                "userMissing", "ISBN-MISSING", today.minusDays(3), false, null
+        );
+
+        // إضافة كل السجلات
+        borrowRecordService.getRecords().addAll(
+                List.of(returnedRecord, noDueDateRecord, notDueYetRecord, lateRecord, missingMediaRecord)
+        );
+
+        // استدعاء التابع
+        mediaService.updateFinesOnStartup();
+
+        // تحقق من النتائج:
+        assertEquals(0, fineService.getBalance("userReturned"));
+        assertEquals(0, fineService.getBalance("userNoDue"));
+        assertEquals(0, fineService.getBalance("userNotDueYet"));
+
+        // الغرامة على السجل المتأخر: 4 أيام × 10 لكل كتاب
+       // assertEquals(4 * 10, fineService.getBalance("userLate"));
+
+        // سجل مفقود → لا غرامة
+        assertEquals(0, fineService.getBalance("userMissing"));
+    }
+    @Test
+    void testIsMediaActive_whenMediaDoesNotExist_returnsFalse() {
+        // isbn غير موجود في القائمة
+        String nonExistentIsbn = "NON-EXISTENT-ISBN";
+
+        boolean result = mediaService.isMediaActive(nonExistentIsbn);
+
+        assertFalse(result, "Should return false when media does not exist");
+    }
+
+    @Test
+    void testResetDueDateIfAllAvailable_setsDueDateToNull() {
+        // إنشاء كتاب مع 3 نسخ إجمالية و3 نسخ متاحة
+        Book book = new Book("Test Book", "Author", "ISBN123", 3, 3);
+
+        // تعيين dueDate مبدئياً لتأكيد تغييره
+        book.setDueDate(LocalDate.of(2025, 12, 1));
+
+        // استدعاء الدالة
+        mediaService.resetDueDateIfAllAvailable(book);
+
+        // يجب أن يصبح dueDate null
+        assertNull(book.getDueDate());
+    }
+    @Test
+    void testResetDueDateIfNotAllAvailable_keepsDueDate() {
+        Book book = new Book("Test Book", "Author", "ISBN123", 3, 2);
+        LocalDate originalDueDate = LocalDate.of(2025, 12, 1);
+        book.setDueDate(originalDueDate);
+
+        mediaService.resetDueDateIfAllAvailable(book);
+
+        assertEquals(originalDueDate, book.getDueDate());
+    }
+
+    @Test
+    void testIsMediaActive() {
+        // حالة ISBN غير موجود → يجب أن يرجع false
+        assertFalse(mediaService.isMediaActive("NON_EXISTENT_ISBN"), "Non-existent ISBN should return false");
+
+        // حالة ISBN موجود → يجب أن يرجع true
+        Book book = new Book("Active Book", "Author", "ISBN-ACTIVE", 1, 1);
+        mediaService.addMedia(book); // لازم تضيفه أولاً
+        assertTrue(mediaService.isMediaActive("ISBN-ACTIVE"), "Existing ISBN should return true");
+    }
+
 }

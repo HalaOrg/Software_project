@@ -446,4 +446,37 @@ public class MediaService {
     }
 
 
+    public String getFilePath() {
+        return filePath;
+    }
+    public FineService getFineService() {
+        return fineService;
+    }
+
+    public TimeProvider getSystemTimeProvider() {
+        return timeProvider;
+    }
+
+    public FineCalculator getFineCalculator() {
+        return fineCalculator;
+    }
+
+
+    public String getMediaFilePath() {
+        return filePath;
+    }
+
+    public boolean isMediaActive(String isbn) {
+        Media m = findByIsbn(isbn); // تبحث عن الكتاب/الـCD بالـISBN
+        if (m == null) return false; // إذا مش موجود → false
+        return true;                 // إذا موجود → true
+    }
+
+    public void resetDueDateIfAllAvailable(Media m) {
+        if (m == null) return;
+        if (m.getAvailableCopies() == m.getTotalCopies()) {
+            m.setDueDate(null);
+        }
+    }
+
 }

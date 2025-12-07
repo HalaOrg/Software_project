@@ -111,4 +111,21 @@ public class RolesTest {
         Roles r1 = new Roles("a", "b");
         assertNotEquals(r1, "string");
     }
+    @Test
+    void testConstructorWithUsernameOnly() {
+        String username = "user1";
+        Roles role = new Roles(username);
+
+        // تحقق من اسم المستخدم
+        assertEquals(username, role.getUsername());
+
+        // تحقق من أن كلمة المرور فارغة
+        assertEquals("", role.getPassword());
+
+        // تحقق من أن roleName تم تعيينها للقيمة الافتراضية
+        assertEquals(Roles.ROLE_MEMBER, role.getRoleName());
+
+        // تحقق من أن البريد الالكتروني فارغ
+        assertEquals("", role.getEmail());
+    }
 }
