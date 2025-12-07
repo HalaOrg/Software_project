@@ -128,4 +128,8 @@ public class FineService {
     static String resolveDefault(String filename) {
         return Path.of(System.getProperty("user.dir", ""), filename).toString();
     }
+    public int getOutstandingFine(String username) {
+        return getBalance(username);
+    }
+
 }

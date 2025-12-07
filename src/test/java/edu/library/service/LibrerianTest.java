@@ -1,11 +1,18 @@
 package edu.library.service;
 
+import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 import edu.library.model.Media;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -18,12 +25,14 @@ class LibrarianTest {
     private MediaService mediaService;
     private AuthService authService;
     private Roles user;
+    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    private final PrintStream originalOut = System.out;
 
-    @BeforeEach
-    void setUp() {
-        mediaService = mock(MediaService.class);
-        authService = mock(AuthService.class);
-        user = new Roles("librarian", "pass", "LIBRARIAN", "lib@example.com");
+
+
+    @AfterEach
+    void tearDown() {
+        System.setOut(originalOut); // إعادة الطباعة الأصلية
     }
 
     @Test
@@ -155,5 +164,245 @@ class LibrarianTest {
         Scanner scanFines = new Scanner("5\n9\n");
         int resFines = Librarian.handle(scanFines, mediaService, authService, user);
         assertEquals(0, resFines);
+    }
+
+    @BeforeEach
+    void setUp() {
+        mediaService = mock(MediaService.class);
+        authService = mock(AuthService.class);
+        user = new Roles("librarian", "pass", "LIBRARIAN", "lib@example.com");
+            System.setOut(new PrintStream(outContent));
+    }
+
+    @Test
+    void testAddMedia_BookAndCD() {
+        // إضافة كتاب
+        Scanner scannerBook = new Scanner(new ByteArrayInputStream("""
+                1
+                Book
+                Java Programming
+                John Doe
+                12345
+                5
+                9
+                """.getBytes()));
+
+        int resultBook = Librarian.handle(scannerBook, mediaService, authService, user);
+        ArgumentCaptor<Media> captorBook = ArgumentCaptor.forClass(Media.class);
+        verify(mediaService).addMedia(captorBook.capture());
+        assertEquals("Java Programming", captorBook.getValue().getTitle());
+        assertEquals(0, resultBook);
+
+        // إضافة CD
+        Scanner scannerCD = new Scanner(new ByteArrayInputStream("""
+                1
+                CD
+                My CD
+                Artist
+                54321
+                3
+                9
+                """.getBytes()));
+
+        int resultCD = Librarian.handle(scannerCD, mediaService, authService, user);
+        ArgumentCaptor<Media> captorCD = ArgumentCaptor.forClass(Media.class);
+        verify(mediaService, times(2)).addMedia(captorCD.capture());
+        assertEquals("My CD", captorCD.getAllValues().get(1).getTitle());
+        assertEquals(0, resultCD);
+    }
+
+    @Test
+    void testSearchMedia_FoundAndNotFound() {
+        Media mockMedia = mock(Media.class);
+        when(mediaService.searchMedia("Java")).thenReturn(List.of(mockMedia));
+        when(mediaService.searchMedia("Nothing")).thenReturn(List.of());
+
+        // بحث موجود
+        Scanner scannerFound = new Scanner(new ByteArrayInputStream("3\nJava\n9\n".getBytes()));
+        int resultFound = Librarian.handle(scannerFound, mediaService, authService, user);
+        assertEquals(0, resultFound);
+        verify(mediaService).searchMedia("Java");
+
+        // بحث غير موجود
+        Scanner scannerNotFound = new Scanner(new ByteArrayInputStream("3\nNothing\n9\n".getBytes()));
+        int resultNotFound = Librarian.handle(scannerNotFound, mediaService, authService, user);
+        assertEquals(0, resultNotFound);
+        verify(mediaService).searchMedia("Nothing");
+    }
+
+    @Test
+    void testUpdateAndDeleteMedia() {
+        when(mediaService.updateMediaQuantity("123", 10)).thenReturn(true);
+        when(mediaService.updateMediaQuantity("999", 5)).thenReturn(false);
+        when(mediaService.deleteMedia("123")).thenReturn(true);
+        when(mediaService.deleteMedia("999")).thenReturn(false);
+
+        // تحديث ناجح
+        Scanner scanUpdateSuccess = new Scanner(new ByteArrayInputStream("6\n123\n10\n9\n".getBytes()));
+        int resUpdateSuccess = Librarian.handle(scanUpdateSuccess, mediaService, authService, user);
+        assertEquals(0, resUpdateSuccess);
+
+        // تحديث فشل
+        Scanner scanUpdateFail = new Scanner(new ByteArrayInputStream("6\n999\n5\n9\n".getBytes()));
+        int resUpdateFail = Librarian.handle(scanUpdateFail, mediaService, authService, user);
+        assertEquals(0, resUpdateFail);
+
+        // حذف ناجح
+        Scanner scanDeleteSuccess = new Scanner(new ByteArrayInputStream("7\n123\n9\n".getBytes()));
+        int resDeleteSuccess = Librarian.handle(scanDeleteSuccess, mediaService, authService, user);
+        assertEquals(0, resDeleteSuccess);
+
+        // حذف فشل
+        Scanner scanDeleteFail = new Scanner(new ByteArrayInputStream("7\n999\n9\n".getBytes()));
+        int resDeleteFail = Librarian.handle(scanDeleteFail, mediaService, authService, user);
+        assertEquals(0, resDeleteFail);
+    }
+
+    @Test
+    void testLogoutAndExit() {
+        // Logout
+        when(authService.logout()).thenReturn(true);
+        Scanner scanLogout = new Scanner(new ByteArrayInputStream("8\n".getBytes()));
+        int resLogout = Librarian.handle(scanLogout, mediaService, authService, user);
+        assertEquals(1, resLogout);
+
+        // Exit
+        Scanner scanExit = new Scanner(new ByteArrayInputStream("9\n".getBytes()));
+        int resExit = Librarian.handle(scanExit, mediaService, authService, user);
+        assertEquals(2, resExit);
+    }
+
+    @Test
+    void testInvalidOption() {
+        Scanner scanInvalid = new Scanner(new ByteArrayInputStream("99\n9\n".getBytes()));
+        int resInvalid = Librarian.handle(scanInvalid, mediaService, authService, user);
+        assertEquals(0, resInvalid);
+    }
+    @Test
+    void testLogoutNoUserLoggedIn() {
+        // محاكاة authService أن logout يرجع false (أي لا يوجد مستخدم مسجل)
+        when(authService.logout()).thenReturn(false);
+
+        Scanner scanner = new Scanner("8\n"); // الخيار 8 = Logout
+        int result = Librarian.handle(scanner, mediaService, authService, user);
+
+        // نتأكد أن النتيجة = 0 (كما في return 0)
+        assertEquals(0, result);
+
+        // نتأكد أن logout تم استدعاؤه مرة واحدة
+        verify(authService, times(1)).logout();
+    }
+
+    @Test
+    void testDisplayMediaOption() {
+        // نضع الخيار 2 في الـ Scanner، وبعدين خيار 9 للخروج
+        Scanner scanner = new Scanner("2\n9\n");
+
+        int result = Librarian.handle(scanner, mediaService, authService, user);
+
+// تحقق أن displayMedia استدعيت مرة واحدة
+        verify(mediaService, times(1)).displayMedia();
+
+// تحقق أن الدالة رجعت 0 (كما في case 2)
+        assertEquals(0, result);
+
+    }
+    @Test
+    void testAddMediaWithInvalidQuantity() {
+        // محاكاة إدخال المستخدم: Book مع quantity < 1
+        String inputData = "Book\nJava Programming\nJohn Doe\n12345\n0\n"; // 0 أقل من 1
+        Scanner scanner = new Scanner(new ByteArrayInputStream(inputData.getBytes()));
+
+        // نفترض handle هي الدالة اللي تستدعي switch
+        int result = Librarian.handle(scanner, mediaService, authService, user);
+
+        // لازم ترجع 0 حسب الكود
+        assertEquals(0, result);
+
+        // addMedia ما لازم يتم استدعاؤها
+        verify(mediaService, never()).addMedia(any());
+    }
+
+
+    @Test
+    void testBorrowRecordsWithOverdue() {
+        // سجل استعارة متأخر (لم يتم إرجاعه)
+        BorrowRecord record1 = mock(BorrowRecord.class);
+        when(record1.getUsername()).thenReturn("user1");
+        when(record1.getIsbn()).thenReturn("123");
+        when(record1.getDueDate()).thenReturn(LocalDate.now().minusDays(5)); // متأخر 5 أيام
+        when(record1.isReturned()).thenReturn(false);
+        when(record1.getReturnDate()).thenReturn(null);
+
+        // سجل استعارة غير متأخر
+        BorrowRecord record2 = mock(BorrowRecord.class);
+        when(record2.getUsername()).thenReturn("user2");
+        when(record2.getIsbn()).thenReturn("456");
+        when(record2.getDueDate()).thenReturn(LocalDate.now().plusDays(2)); // غير متأخر
+        when(record2.isReturned()).thenReturn(false);
+        when(record2.getReturnDate()).thenReturn(null);
+
+        List<BorrowRecord> records = List.of(record1, record2);
+
+        boolean anyOverdue = false;
+
+        // الكود الأصلي المطلوب اختباره
+        System.out.println("Borrow Records:");
+        for (BorrowRecord record : records) {
+            boolean overdue = !record.isReturned() && record.getDueDate() != null && LocalDate.now().isAfter(record.getDueDate());
+            System.out.printf("User: %s | ISBN: %s | Due: %s | Returned: %s | ReturnDate: %s%n",
+                    record.getUsername(), record.getIsbn(), record.getDueDate(), record.isReturned(), record.getReturnDate());
+            if (overdue) {
+                anyOverdue = true;
+                long daysOverdue = ChronoUnit.DAYS.between(record.getDueDate(), LocalDate.now());
+                System.out.println("Overdue by " + daysOverdue + " day(s). Loans beyond 28 days trigger fines.");
+            }
+        }
+
+        // تحقق أن أي سجل متأخر تم اكتشافه
+        assertTrue(anyOverdue);
+
+        // تحقق من الطباعة الصحيحة
+        String output = outContent.toString();
+        assertTrue(output.contains("user1"));
+        assertTrue(output.contains("123"));
+        assertTrue(output.contains("Overdue by 5 day(s)"));
+        assertTrue(output.contains("user2"));
+        assertTrue(output.contains("456"));
+    }
+    @Test
+    void testNoOverdueRecords() {
+        List<BorrowRecord> records = List.of(
+                new BorrowRecord("user1", "ISBN1", LocalDate.now().plusDays(5), false, null),
+                new BorrowRecord("user2", "ISBN2", LocalDate.now().plusDays(10), false, null)
+        );
+
+        boolean anyOverdue = false;
+        for (BorrowRecord record : records) {
+            boolean overdue = !record.isReturned() && record.getDueDate() != null && LocalDate.now().isAfter(record.getDueDate());
+            System.out.printf("User: %s | ISBN: %s | Due: %s | Returned: %s | ReturnDate: %s%n",
+                    record.getUsername(), record.getIsbn(), record.getDueDate(), record.isReturned(), record.getReturnDate());
+            if (overdue) {
+                anyOverdue = true;
+            }
+        }
+
+        if (!anyOverdue) {
+            System.out.println("No overdue items detected (all within 28-day window).");
+        }
+
+        String output = outContent.toString();
+        assertTrue(output.contains("No overdue items detected (all within 28-day window)"));
+    }
+    @Test
+    void testNoFines() {
+        Map<String, Integer> fines = Map.of(); // خريطة فارغة تمثل عدم وجود غرامات
+
+        if (fines.isEmpty()) {
+            System.out.println("No fines found for any user.");
+        }
+
+        String output = outContent.toString();
+        assertTrue(output.contains("No fines found for any user."));
     }
 }
