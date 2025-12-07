@@ -8,11 +8,13 @@ import edu.library.model.Roles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+
 public class Admin {
 
     private Admin() {
         // prevent instantiation
     }
+
     public static int handle(Scanner input,
                              MediaService service,
                              AuthService auth,
@@ -41,12 +43,16 @@ public class Admin {
 
         String opt = input.nextLine();
         int optInt;
-        try { optInt = Integer.parseInt(opt.trim()); }
-        catch (Exception e) { System.out.println("Invalid option"); return 0; }
+        try {
+            optInt = Integer.parseInt(opt.trim());
+        } catch (Exception e) {
+            System.out.println("Invalid option");
+            return 0;
+        }
 
         switch (optInt) {
 
-            case 1:
+            case 1: // Add Book
                 System.out.print("Enter title: ");
                 String title = input.nextLine();
                 System.out.print("Enter author: ");
@@ -58,29 +64,29 @@ public class Admin {
                 System.out.println("Book added successfully!");
                 return 0;
 
-            case 2:
+            case 2: // Search Book
                 System.out.print("Enter title/author/ISBN to search: ");
                 String keyword = input.nextLine();
 
                 List<Media> found = service.searchMedia(keyword);
                 List<Book> foundBooks = new ArrayList<>();
-                for (Media m : found) if (m instanceof Book) foundBooks.add((Book)m);
+                for (Media m : found) if (m instanceof Book) foundBooks.add((Book) m);
 
-                if (foundBooks.isEmpty()) System.out.println(" No matching books found!");
+                if (foundBooks.isEmpty()) System.out.println("No books found.");
                 else {
                     System.out.println("Found books:");
-                    for (Book b : foundBooks) System.out.println(b);
+                    for (Book b : foundBooks) System.out.println(b.getTitle());
                 }
                 return 0;
 
-            case 3:
+            case 3: // Display All Books
                 System.out.println("All Books:");
                 for (Media m : service.getAllMedia()) {
-                    if (m instanceof Book) System.out.println(m);
+                    if (m instanceof Book) System.out.println(m.getTitle());
                 }
                 return 0;
 
-            case 4:
+            case 4: // Add Member
                 String memEmail;
                 while (true) {
                     System.out.print("Enter new member's email: ");
@@ -95,7 +101,7 @@ public class Admin {
                 System.out.print("Enter new member's username: ");
                 String memUser = input.nextLine();
                 if (auth.userExists(memUser)) {
-                    System.out.println(" User already exists: " + memUser);
+                    System.out.println("User already exists: " + memUser);
                     return 0;
                 }
 
@@ -103,16 +109,16 @@ public class Admin {
                 String memPass = input.nextLine();
 
                 auth.addUser(memUser, memPass, "MEMBER", memEmail);
-                System.out.println(" Member added: " + memUser);
+                System.out.println("Member added: " + memUser);
                 return 0;
 
-            case 5:
+            case 5: // Add Librarian
                 String libEmail;
                 while (true) {
                     System.out.print("Enter new librarian's email (required): ");
                     libEmail = input.nextLine().trim();
                     if (libEmail.isEmpty()) {
-                        System.out.println(" Email is required and cannot be empty.");
+                        System.out.println("Email is required and cannot be empty.");
                         continue;
                     }
                     break;
@@ -132,12 +138,12 @@ public class Admin {
                 System.out.println("Librarian added: " + libUser);
                 return 0;
 
-            case 6:
+            case 6: // Remove User
                 System.out.print("Enter username to remove: ");
                 String rem = input.nextLine();
 
                 if (rem.equalsIgnoreCase(user.getUsername())) {
-                    System.out.println(" You cannot remove yourself.");
+                    System.out.println("You cannot remove yourself.");
                     return 0;
                 }
 
@@ -147,48 +153,48 @@ public class Admin {
                 }
 
                 if (service.hasActiveBorrowRecords(rem)) {
-                    System.out.println(" Cannot unregister user with active loans.");
+                    System.out.println("Cannot unregister user with active loans.");
                     return 0;
                 }
 
                 if (service.getOutstandingFine(rem) > 0) {
-                    System.out.println(" Cannot unregister user with unpaid fines.");
+                    System.out.println("Cannot unregister user with unpaid fines.");
                     return 0;
                 }
 
                 if (auth.removeUserWithRestrictions(rem, service.getBorrowRecordService()))
                     System.out.println("Removed user: " + rem);
                 else
-                    System.out.println(" User not found or cannot be removed: " + rem);
+                    System.out.println("User not found or cannot be removed: " + rem);
 
                 return 0;
 
-            case 7:
+            case 7: // List Users
                 System.out.println("Users in system:");
                 for (Roles r : auth.getUsers()) {
-                    System.out.println(" " + r.getUsername() + " (" + r.getRoleName() + ")");
+                    System.out.println(r.getUsername() + " (" + r.getRoleName() + ")");
                 }
                 return 0;
 
-            case 8:
+            case 8: // Send reminders
                 reminderService.sendReminders();
                 System.out.println("Reminders sent.");
                 return 0;
 
-            case 9:
+            case 9: // Logout
                 if (auth.logout()) {
                     System.out.println("Logged out successfully.");
                     return 1;
                 } else {
-                    System.out.println(" No user is currently logged in.");
+                    System.out.println("No user is currently logged in.");
                     return 0;
                 }
 
-            case 10:
+            case 10: // Exit
                 System.out.println("Exiting...");
                 return 2;
 
-            case 11:
+            case 11: // Add CD
                 System.out.print("Enter CD title: ");
                 String cdTitle = input.nextLine();
 
@@ -202,25 +208,25 @@ public class Admin {
                 System.out.println("CD added successfully!");
                 return 0;
 
-            case 12:
+            case 12: // Search CD
                 System.out.print("Enter title/artist/ISBN to search CD: ");
                 String key = input.nextLine();
 
                 List<Media> foundCD = service.searchMedia(key);
                 List<CD> foundCDs = new ArrayList<>();
-                for (Media m : foundCD) if (m instanceof CD) foundCDs.add((CD)m);
+                for (Media m : foundCD) if (m instanceof CD) foundCDs.add((CD) m);
 
                 if (foundCDs.isEmpty()) System.out.println("No matching CDs found!");
                 else {
-                    System.out.println(" Found CDs:");
-                    for (CD c : foundCDs) System.out.println(c);
+                    System.out.println("Found CDs:");
+                    for (CD c : foundCDs) System.out.println(c.getTitle());
                 }
                 return 0;
 
-            case 13:
+            case 13: // Display all CDs
                 System.out.println("All CDs:");
                 for (Media m : service.getAllMedia()) {
-                    if (m instanceof CD) System.out.println(m);
+                    if (m instanceof CD) System.out.println(m.getTitle());
                 }
                 return 0;
 
