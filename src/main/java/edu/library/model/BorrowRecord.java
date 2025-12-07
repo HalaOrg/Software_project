@@ -16,6 +16,11 @@ public class BorrowRecord {
         this.returned = returned;
         this.returnDate = returnDate;
     }
+    public BorrowRecord(String isbn, String username, LocalDate dueDate) {
+        this.isbn = isbn;
+        this.username = username;
+        this.dueDate = dueDate;
+    }
 
     public String getUsername() {
         return username;
@@ -41,5 +46,7 @@ public class BorrowRecord {
         this.returned = true;
         this.returnDate = returnDate;
     }
+
+
 
 }
