@@ -127,7 +127,7 @@ public class Librarian {
         }
     }
 
-    private static void displayBorrowRecords(MediaService service) {
+    static void displayBorrowRecords(MediaService service) {
         List<BorrowRecord> records = service.getBorrowRecordService().getAllRecords();
         if (records.isEmpty()) {
             System.out.println("No borrow records available.");
@@ -152,7 +152,7 @@ public class Librarian {
         }
     }
 
-    private static void displayFineBalances(MediaService service) {
+    static void displayFineBalances(MediaService service) {
         Map<String, Integer> fines = service.getAllFines();
         if (fines.isEmpty()) {
             System.out.println("No fines have been recorded.");
@@ -165,7 +165,7 @@ public class Librarian {
         }
     }
 
-    private static int readInt(Scanner input, int minValue) {
+    static int readInt(Scanner input, int minValue) {
         String value = input.nextLine();
         try {
             int parsed = Integer.parseInt(value.trim());
@@ -175,4 +175,5 @@ public class Librarian {
             return -1;
         }
     }
+
 }

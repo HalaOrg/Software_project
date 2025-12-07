@@ -1,5 +1,6 @@
 package edu.library.service;
 
+import edu.library.model.Book;
 import edu.library.model.BorrowRecord;
 import edu.library.model.Roles;
 import edu.library.model.Media;
@@ -405,4 +406,139 @@ class LibrarianTest {
         String output = outContent.toString();
         assertTrue(output.contains("No fines found for any user."));
     }
+    @Test
+    void testAddMediaWithUnknownType_defaultsToBook() {
+        Scanner scanner = new Scanner("""
+            1
+            UnknownType
+            Mystery Title
+            Author Name
+            99999
+            2
+            9
+            """);
+
+        int result = Librarian.handle(scanner, mediaService, authService, user);
+
+        ArgumentCaptor<Media> captor = ArgumentCaptor.forClass(Media.class);
+        verify(mediaService).addMedia(captor.capture());
+
+        assertTrue(captor.getValue() instanceof Book); // fallback
+        assertEquals("Mystery Title", captor.getValue().getTitle());
+        assertEquals(0, result);
+    }
+    @Test
+    void testReadInt_InvalidAndBelowMin() {
+        // غير صالح
+        Scanner scannerInvalid = new Scanner("abc\n");
+        assertEquals(-1, Librarian.readInt(scannerInvalid, 0));
+
+        // أقل من الحد الأدنى
+        Scanner scannerLow = new Scanner("-5\n");
+        assertEquals(-1, Librarian.readInt(scannerLow, 0));
+
+        // صالح
+        Scanner scannerValid = new Scanner("10\n");
+        assertEquals(10, Librarian.readInt(scannerValid, 0));
+    }
+
+    @Test
+    void testDisplayFineBalances_WithFines() {
+        MediaService service = mock(MediaService.class);
+        Map<String, Integer> fines = Map.of("user1", 50, "user2", 30);
+        when(service.getAllFines()).thenReturn(fines);
+
+        Librarian.displayFineBalances(service);
+
+        String output = outContent.toString();
+        assertTrue(output.contains("user1: 50 NIS"));
+        assertTrue(output.contains("user2: 30 NIS"));
+    }
+
+    @Test
+    void testDisplayBorrowRecords_MixedOverdue() {
+        MediaService service = mock(MediaService.class);
+        BorrowRecord record1 = mock(BorrowRecord.class);
+        BorrowRecord record2 = mock(BorrowRecord.class);
+
+        when(record1.isReturned()).thenReturn(false);
+        when(record1.getDueDate()).thenReturn(LocalDate.now().minusDays(3));
+        when(record1.getUsername()).thenReturn("user1");
+        when(record1.getIsbn()).thenReturn("123");
+        when(record1.getReturnDate()).thenReturn(null);
+
+        when(record2.isReturned()).thenReturn(false);
+        when(record2.getDueDate()).thenReturn(LocalDate.now().plusDays(5));
+        when(record2.getUsername()).thenReturn("user2");
+        when(record2.getIsbn()).thenReturn("456");
+        when(record2.getReturnDate()).thenReturn(null);
+
+        BorrowRecordService borrowService = mock(BorrowRecordService.class);
+        when(borrowService.getAllRecords()).thenReturn(List.of(record1, record2));
+        when(service.getBorrowRecordService()).thenReturn(borrowService);
+
+        Librarian.displayBorrowRecords(service);
+
+        String output = outContent.toString();
+        assertTrue(output.contains("user1"));
+        assertTrue(output.contains("Overdue by 3 day(s)"));
+        assertTrue(output.contains("user2"));
+        assertTrue(output.contains("No overdue items detected") == false); // لأن هناك متأخر
+    }
+    @Test
+    void testUpdateMediaWithInvalidInput() {
+        // إدخال غير صالح (نص بدلاً من رقم)
+        Scanner scannerInvalid = new Scanner("6\n123\nabc\n9\n");
+        int result = Librarian.handle(scannerInvalid, mediaService, authService, user);
+        assertEquals(0, result);
+
+        // تحقق أن الدالة لم تُستدعَ إلا بالقيم السالبة (-1) أو أقل من الحد الأدنى
+        verify(mediaService, never()).updateMediaQuantity(any(), intThat(i -> i > 0));
+
+        // إدخال أقل من الحد الأدنى (0)
+        Scanner scannerLow = new Scanner("6\n123\n0\n9\n");
+        int resultLow = Librarian.handle(scannerLow, mediaService, authService, user);
+        assertEquals(0, resultLow);
+
+        // تحقق أن الدالة لم تُستدعَ بأي قيمة صالحة (>0)
+        verify(mediaService, never()).updateMediaQuantity(any(), intThat(i -> i > 0));
+    }
+
+    @Test
+    void testDeleteMediaWithEmptyInput() {
+        Scanner scannerEmpty = new Scanner("7\n\n9\n");
+        int result = Librarian.handle(scannerEmpty, mediaService, authService, user);
+        assertEquals(0, result);
+
+        // التحقق أن deleteMedia لم يُستدعَ مع أي قيمة غير فارغة
+        verify(mediaService, never()).deleteMedia(argThat(s -> s != null && !s.isEmpty()));
+    }
+
+    @Test
+    void testReadInt_AtMinValue() {
+        Scanner scanner = new Scanner("5\n");
+        int result = Librarian.readInt(scanner, 5);
+        assertEquals(5, result);
+    }
+    @Test
+    void testDisplayBorrowRecords_WithNullDueDate() {
+        BorrowRecord record = mock(BorrowRecord.class);
+        when(record.getUsername()).thenReturn("userNull");
+        when(record.getIsbn()).thenReturn("000");
+        when(record.getDueDate()).thenReturn(null);
+        when(record.isReturned()).thenReturn(false);
+        when(record.getReturnDate()).thenReturn(null);
+
+        BorrowRecordService borrowService = mock(BorrowRecordService.class);
+        when(borrowService.getAllRecords()).thenReturn(List.of(record));
+        MediaService service = mock(MediaService.class);
+        when(service.getBorrowRecordService()).thenReturn(borrowService);
+
+        Librarian.displayBorrowRecords(service);
+
+        String output = outContent.toString();
+        assertTrue(output.contains("userNull"));
+        assertTrue(output.contains("000"));
+    }
+
 }

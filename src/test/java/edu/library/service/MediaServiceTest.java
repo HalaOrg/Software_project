@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -422,5 +423,170 @@ class MediaServiceTest {
         mediaService.addMedia(book); // لازم تضيفه أولاً
         assertTrue(mediaService.isMediaActive("ISBN-ACTIVE"), "Existing ISBN should return true");
     }
+    @Test
+    void testBorrow_nullMedia_returnsFalse() {
+        assertFalse(mediaService.borrow(null, "user1"));
+    }
+
+
+
+    @Test
+    void testBorrow_userWithFine_cannotBorrow() {
+        Book book = new Book("Book2", "Author", "ISBN2", 1, 1);
+        mediaService.addMedia(book);
+        fineService.addFine("user1", 50);
+
+        assertFalse(mediaService.borrow(book, "user1"));
+    }
+
+
+    @Test
+    void testAddBook_withValidData_addsBookCorrectly() {
+        mediaService.addBook("New Book", "Author", "ISBN123", 5);
+
+        Book added = mediaService.findBookByIsbn("ISBN123");
+        assertNotNull(added);
+        assertEquals(5, added.getTotalCopies());
+        assertEquals(5, added.getAvailableCopies());
+    }
+
+    @Test
+    void testAddBook_withNullOrBlankTitleOrIsbn_doesNotAddBook() {
+        mediaService.addBook(null, "Author", "ISBN1", 3);
+        mediaService.addBook("", "Author", "ISBN2", 3);
+        mediaService.addBook("Title", "Author", null, 3);
+        mediaService.addBook("Title", "Author", "", 3);
+
+        assertTrue(mediaService.getBooks().isEmpty());
+    }
+    @Test
+    void testReturnMedia_noActiveBorrowRecord_returnsFalse() {
+        Book book = new Book("BookX", "Author", "ISBNX", 1, 1);
+        mediaService.addMedia(book);
+
+        assertFalse(mediaService.returnMedia(book, "user1"));
+    }
+
+
+    @Test
+    void testLoadMediaFromFile_ignoresInvalidLines() throws IOException {
+        Path testFile = tempDir.resolve("media_invalid.txt");
+        Files.writeString(testFile, "INVALID LINE\nBOOK;Title;Author;ISBN;X;Y;2025-12-08\n");
+
+        MediaService service = new MediaService(testFile.toString(),
+                borrowRecordService, fineService);
+        assertTrue(service.getItems().isEmpty(), "Invalid lines should be ignored");
+    }
+
+    @Test
+    void testResetDueDateIfAllAvailable_nullMedia_doesNothing() {
+        assertDoesNotThrow(() -> mediaService.resetDueDateIfAllAvailable(null));
+    }
+
+    @Test
+    void testIsMediaActive_existingAndNonExisting() {
+        assertFalse(mediaService.isMediaActive("UNKNOWN"));
+
+        Book b = new Book("Active", "Author", "ACT123", 1,1);
+        mediaService.addMedia(b);
+
+        assertTrue(mediaService.isMediaActive("ACT123"));
+    }
+    @Test
+    void testLoadMediaFromFile_fileDoesNotExist_doesNothing() {
+        Path nonExistent = tempDir.resolve("nonexistent.txt");
+        MediaService service = new MediaService(nonExistent.toString(),
+                borrowRecordService, fineService);
+        assertTrue(service.getItems().isEmpty(), "Items should be empty if file does not exist");
+    }
+    @Test
+    void testLoadMediaFromFile_invalidNumbers_areIgnored() throws IOException {
+        Path file = tempDir.resolve("bad_numbers.txt");
+        Files.writeString(file, "BOOK;Title;Author;ISBN;NaN;1;2025-12-07\n");
+        MediaService service = new MediaService(file.toString(), borrowRecordService, fineService);
+        assertTrue(service.getItems().isEmpty(), "Lines with invalid numbers should be ignored");
+    }
+
+
+
+
+    @Test
+    void testReturnMedia_beforeDueDate_noFine() {
+        Book book = new Book("Book", "Author", "ISBN", 1,1);
+        mediaService.addMedia(book);
+
+        LocalDate dueDate = LocalDate.of(2025,12,10);
+        BorrowRecord record = new BorrowRecord("user1", "ISBN", dueDate, false, null);
+        borrowRecordService.getRecords().add(record);
+
+        when(timeProvider.today()).thenReturn(LocalDate.of(2025,12,5));
+        mediaService.returnMedia(book, "user1");
+
+        assertEquals(0, fineService.getBalance("user1"));
+    }
+    @Test
+    void testUpdateFinesOnStartup_mediaUnknownOrInvalidType() {
+        BorrowRecord record = new BorrowRecord("user1", "UNKNOWN", LocalDate.now().minusDays(5), false, null);
+        borrowRecordService.getRecords().add(record);
+
+        assertDoesNotThrow(() -> mediaService.updateFinesOnStartup());
+    }
+
+
+    @Test
+    void testLoadMediaFromFile_partialInvalidNumbers() throws IOException {
+        Path file = tempDir.resolve("partial_invalid.txt");
+        // نسخة صحيحة ونسخة بأرقام غير صالحة
+        Files.writeString(file,
+                "BOOK;Valid Book;Author;ISBN1;2;2;2025-12-07\n" +
+                        "BOOK;Invalid Book;Author;ISBN2;NaN;X;2025-12-07\n"
+        );
+
+        MediaService service = new MediaService(file.toString(), borrowRecordService, fineService);
+
+        assertEquals(1, service.getItems().size(), "Only valid lines should be loaded");
+        assertEquals("Valid Book", service.getItems().get(0).getTitle());
+    }
+
+    @Test
+    void testLoadMediaFromFile_missingFields_ignored() throws IOException {
+        Path file = tempDir.resolve("missing_fields.txt");
+        Files.writeString(file, "BOOK;TitleOnly\n"); // حقل ناقص
+        MediaService service = new MediaService(file.toString(), borrowRecordService, fineService);
+
+        assertTrue(service.getItems().isEmpty(), "Lines with missing fields should be ignored");
+    }
+
+    @Test
+    void testBorrowAndReturnBook_withDueDateAndFine() {
+        Book book = new Book("BookWithDue", "Author", "ISBN-DUE", 1, 1);
+        mediaService.addMedia(book);
+
+        // إضافة غرامة للمستخدم
+        fineService.addFine("user1", 20);
+        assertFalse(mediaService.borrowBook(book, "user1"), "User with fine cannot borrow");
+
+        // إزالة الغرامة → يستطيع الاستعارة
+        fineService.payFine("user1", 20);
+        when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 5));
+        assertTrue(mediaService.borrowBook(book, "user1"));
+        assertEquals(0, book.getAvailableCopies());
+
+        // إرجاع قبل الموعد → لا غرامة إضافية
+        when(timeProvider.today()).thenReturn(LocalDate.of(2025, 12, 6));
+        mediaService.returnBook(book, "user1");
+        assertEquals(0, fineService.getBalance("user1"));
+        assertEquals(1, book.getAvailableCopies());
+    }
+
+
+
+    @Test
+    void testDeleteMedia_nonExisting_returnsFalse() {
+        assertFalse(mediaService.deleteMedia("NON_EXISTING"), "Deleting non-existing media should return false");
+    }
+
+
+
 
 }

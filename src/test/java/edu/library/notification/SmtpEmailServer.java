@@ -254,5 +254,49 @@ class SmtpEmailServerUltimateTest {
             mockedTransport.verify(() -> Transport.send(Mockito.any(MimeMessage.class)), Mockito.times(1));
         }
     }
+    @Test
+    void testSendEmailEmptyMessageDoesNothing() {
+        SmtpEmailServer server = new SmtpEmailServer(defaultSettings);
+
+        // هذا الفرع لا يقع ضمن الشرط الأول (message == null) → ينتقل إلى isConfigured
+        // ولأن السيرفر configured سوف ينفّذ Transport.send
+        try (MockedStatic<Transport> mockedTransport = Mockito.mockStatic(Transport.class)) {
+            mockedTransport.when(() -> Transport.send(Mockito.any(MimeMessage.class))).thenAnswer(i -> null);
+
+            server.sendEmail("to@example.com", "");
+
+            mockedTransport.verify(() -> Transport.send(Mockito.any(MimeMessage.class)), Mockito.times(1));
+        }
+    }
+    @Test
+    void testSendEmailNotConfiguredPrintsExactMessage() {
+        SmtpEmailServer.SmtpEmailSettings badSettings =
+                new SmtpEmailServer.SmtpEmailSettings("", 587, true, "", "", null);
+        SmtpEmailServer server = new SmtpEmailServer(badSettings);
+
+        // التقاط System.out
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        System.setOut(new java.io.PrintStream(out));
+
+        server.sendEmail("to@example.com", "msg");
+
+        String printed = out.toString().trim();
+        assertEquals("Email configuration is incomplete; skipping send.", printed);
+
+        // إعادة System.out
+        System.setOut(System.out);
+    }
+    @Test
+    void testConstructorHandlesNullValuesGracefully() {
+        SmtpEmailServer.SmtpEmailSettings settings =
+                new SmtpEmailServer.SmtpEmailSettings(null, 587, true, null, null, null);
+
+        SmtpEmailServer server = new SmtpEmailServer(settings);
+
+        assertEquals("", server.getHost());
+        assertEquals("", server.getUsername());
+        assertEquals("", server.getPassword());
+        assertEquals("", server.getFromAddress()); // لأنه username == ""
+    }
 
 }
