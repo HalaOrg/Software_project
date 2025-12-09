@@ -1,6 +1,6 @@
 package edu.library.service;
 
-import edu.library.model.Roles;
+import edu.library.domain.model.Roles;
 
 import java.io.*;
 import java.util.ArrayList;

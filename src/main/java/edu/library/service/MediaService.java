@@ -1,9 +1,12 @@
 package edu.library.service;
 
-import edu.library.model.*;
-import edu.library.fine.FineCalculator;
-import edu.library.time.TimeProvider;
-import edu.library.time.SystemTimeProvider;
+import edu.library.domain.model.Book;
+import edu.library.domain.model.BorrowRecord;
+import edu.library.domain.model.CD;
+import edu.library.domain.model.Media;
+import edu.library.domain.fine.FineCalculator;
+import edu.library.domain.time.TimeProvider;
+import edu.library.domain.time.SystemTimeProvider;
 
 import java.io.*;
 import java.time.LocalDate;

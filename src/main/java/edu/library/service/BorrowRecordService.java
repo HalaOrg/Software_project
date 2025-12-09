@@ -1,6 +1,6 @@
 package edu.library.service;
 
-import edu.library.model.BorrowRecord;
+import edu.library.domain.model.BorrowRecord;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;

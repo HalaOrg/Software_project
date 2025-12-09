@@ -1,12 +1,9 @@
 package edu.library.service;
 
-import edu.library.fine.FineCalculator;
-import edu.library.model.Book;
-import edu.library.model.BorrowRecord;
-import edu.library.service.BorrowRecordService;
-import edu.library.service.FineService;
-import edu.library.service.MediaService;
-import edu.library.time.TimeProvider;
+import edu.library.domain.fine.FineCalculator;
+import edu.library.domain.model.Book;
+import edu.library.domain.model.BorrowRecord;
+import edu.library.domain.time.TimeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

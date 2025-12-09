@@ -1,9 +1,9 @@
 package edu.library.service;
 
-import edu.library.model.BorrowRecord;
-import edu.library.model.Roles;
-import edu.library.notification.Observer;
-import edu.library.time.TimeProvider;
+import edu.library.domain.model.BorrowRecord;
+import edu.library.domain.model.Roles;
+import edu.library.domain.notification.Observer;
+import edu.library.domain.time.TimeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;

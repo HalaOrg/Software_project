@@ -1,1 +1,8 @@
-BOOK;Book A;Author A;12345;١;١;null
+BOOK;Children's book;Jane Austen;R100;٥;٥;null
+BOOK;Romance book;Emma;R200;٣;٣;null
+BOOK;Fantasy Book;Jass;R300;٢;١;2026-01-06
+BOOK;Horror Book;Stoker;R400;٧;٦;2026-01-06
+CD;music;Jon;C100;٤;٣;2025-12-16
+CD;Pop music;artist1;C200;٢;٢;null
+CD;alquran alkarim;-;C300;٧;٧;null
+CD;java course;haya samm;C400;٣;٣;null

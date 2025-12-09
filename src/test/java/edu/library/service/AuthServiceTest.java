@@ -1,7 +1,7 @@
 package edu.library.service;
 
-import edu.library.model.BorrowRecord;
-import edu.library.model.Roles;
+import edu.library.domain.model.BorrowRecord;
+import edu.library.domain.model.Roles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

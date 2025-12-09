@@ -1,12 +1,11 @@
 package edu.library.service;
 
-import edu.library.model.BorrowRecord;
-import edu.library.model.Roles;
-import edu.library.notification.EmailNotifier;
-import edu.library.notification.EmailServer;
-import edu.library.notification.Observer;
-import edu.library.notification.SmtpEmailServer;
-import edu.library.time.TimeProvider;
+import edu.library.domain.model.BorrowRecord;
+import edu.library.domain.model.Roles;
+import edu.library.domain.notification.EmailNotifier;
+import edu.library.domain.notification.Observer;
+import edu.library.domain.notification.SmtpEmailServer;
+import edu.library.domain.time.TimeProvider;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;

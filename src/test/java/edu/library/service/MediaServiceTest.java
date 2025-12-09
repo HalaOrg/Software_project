@@ -1,12 +1,11 @@
 package edu.library.service;
 
-import edu.library.model.BorrowRecord;
+import edu.library.domain.model.BorrowRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -15,10 +14,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-import edu.library.model.Book;
-import edu.library.model.CD;
-import edu.library.fine.FineCalculator;
-import edu.library.time.TimeProvider;
+import edu.library.domain.model.Book;
+import edu.library.domain.model.CD;
+import edu.library.domain.fine.FineCalculator;
+import edu.library.domain.time.TimeProvider;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;

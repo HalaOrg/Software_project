@@ -1,3 +1,2 @@
 leen,0
-remah,30
-testuser,0
+remah,50
